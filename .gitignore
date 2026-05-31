@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.npm-cache/
+.codex-git/
+.git/
+.git-broken/
+
+*.log
+vite.out.log
+vite.err.log
