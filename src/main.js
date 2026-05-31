@@ -30,6 +30,10 @@ const hud = createHud(game, {
   onTiltRequest: enableTilt,
 });
 const screens = createScreens(game, { onRestart: restartGame });
+const uiState = {
+  isBallPlaced: () => isBallPlaced,
+  isDebug: debug,
+};
 
 app.append(hud.element, board.element, screens.element);
 
@@ -48,7 +52,7 @@ function renderGame() {
     board.element.append(ball.element);
   }
   hud.render();
-  screens.render();
+  screens.render(uiState);
   debugPanel?.render();
 }
 

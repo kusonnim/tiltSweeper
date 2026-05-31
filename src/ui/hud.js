@@ -14,6 +14,10 @@ export function createHud(game, { input, onTiltRequest = () => {} } = {}) {
     const mines = document.createElement('span');
     mines.textContent = `${game.mines} mines`;
 
+    const hint = document.createElement('span');
+    hint.className = 'hud-hint';
+    hint.textContent = 'Tap flags';
+
     const tiltButton = document.createElement('button');
     tiltButton.className = 'tilt-button';
     tiltButton.type = 'button';
@@ -21,7 +25,7 @@ export function createHud(game, { input, onTiltRequest = () => {} } = {}) {
     tiltButton.disabled = ['waiting', 'active'].includes(input?.getStatus());
     tiltButton.addEventListener('click', onTiltRequest);
 
-    element.append(title, size, mines, tiltButton);
+    element.append(title, size, mines, hint, tiltButton);
   }
 
   return {
