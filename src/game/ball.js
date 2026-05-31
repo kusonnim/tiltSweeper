@@ -1,7 +1,7 @@
 const BALL_RADIUS = 14;
-const ACCELERATION = 0.42;
+const ACCELERATION = 0.294;
 const FRICTION = 0.94;
-const MAX_SPEED = 6;
+const MAX_SPEED = 4.2;
 const DWELL_DURATION_MS = 650;
 
 export function createBallController({ board, input }) {
@@ -12,6 +12,7 @@ export function createBallController({ board, input }) {
   let dwellStartedAt = 0;
   let onEnterCellCallback = () => {};
   let isPlaced = false;
+  let animationFrameId = 0;
 
   const ball = document.createElement('div');
   ball.className = 'ball ball-unplaced';
@@ -91,6 +92,11 @@ export function createBallController({ board, input }) {
 
     const cell = board.cellFromPoint(x, y);
     if (!cell) {
+      resetDwell();
+      return;
+    }
+
+    if (!board.isCellRevealable(cell.row, cell.col)) {
       resetDwell();
       return;
     }

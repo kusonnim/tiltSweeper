@@ -77,12 +77,18 @@ export function createBoardView(
     };
   }
 
+  function isCellRevealable(row, col) {
+    const cell = game.board[row]?.[col];
+    return Boolean(cell && !cell.isRevealed && !cell.isFlagged && game.status !== 'lost' && game.status !== 'won');
+  }
+
   return {
     element,
     render,
     cellFromPoint,
     getCellCenter,
     getBounds,
+    isCellRevealable,
   };
 }
 
