@@ -5,11 +5,14 @@ import { createBallController } from './game/ball.js';
 import { createInputController } from './game/input.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
+import { createThemeController } from './ui/theme.js';
 import { isDebugMode } from './debug/debug.js';
 import { createDebugPanel } from './debug/debugPanel.js';
 
 const app = document.querySelector('#app');
 const debug = isDebugMode();
+const theme = createThemeController();
+theme.applyTheme();
 
 const game = createMinesweeperGame();
 let ball;
@@ -27,6 +30,8 @@ const board = createBoardView(game, {
 const input = createInputController();
 const hud = createHud(game, {
   input,
+  theme,
+  onThemeNext: nextTheme,
   onTiltRequest: enableTilt,
 });
 const screens = createScreens(game, { onRestart: restartGame });
@@ -82,6 +87,11 @@ function restartGame() {
 
 async function enableTilt() {
   await input.enableTilt();
+  renderGame();
+}
+
+function nextTheme() {
+  theme.nextTheme();
   renderGame();
 }
 

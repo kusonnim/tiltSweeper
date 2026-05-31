@@ -24,6 +24,7 @@ export function createBoardView(
           boardCell,
           debug,
           activeCell?.row === row && activeCell?.col === col,
+          (row + col) % 2 === 0,
         );
         cell.type = 'button';
         cell.dataset.row = String(row);
@@ -110,8 +111,10 @@ export function createBoardView(
   };
 }
 
-function getCellClassName(cell, debug, isActive) {
+function getCellClassName(cell, debug, isActive, isLightSquare) {
   const classNames = ['cell'];
+
+  classNames.push(isLightSquare ? 'cell-light' : 'cell-dark');
 
   if (isActive) {
     classNames.push('cell-active');
