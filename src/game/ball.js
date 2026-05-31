@@ -10,6 +10,8 @@ export function createBallController({ board, input }) {
   let activeCellKey = '';
   let completedCellKey = '';
   let dwellStartedAt = 0;
+  let currentCell = null;
+  let dwellProgress = 0;
   let onEnterCellCallback = () => {};
   let isPlaced = false;
   let animationFrameId = 0;
@@ -92,9 +94,12 @@ export function createBallController({ board, input }) {
 
     const cell = board.cellFromPoint(x, y);
     if (!cell) {
+      currentCell = null;
       resetDwell();
       return;
     }
+
+    currentCell = cell;
 
     if (!board.isCellRevealable(cell.row, cell.col)) {
       resetDwell();
@@ -123,10 +128,10 @@ export function createBallController({ board, input }) {
       return;
     }
 
-    const progress = Math.min((performance.now() - dwellStartedAt) / DWELL_DURATION_MS, 1);
-    setRevealProgress(progress);
+    dwellProgress = Math.min((performance.now() - dwellStartedAt) / DWELL_DURATION_MS, 1);
+    setRevealProgress(dwellProgress);
 
-    if (progress < 1) return;
+    if (dwellProgress < 1) return;
 
     completedCellKey = activeCellKey;
     setRevealProgress(0);
@@ -137,6 +142,7 @@ export function createBallController({ board, input }) {
     activeCellKey = '';
     completedCellKey = '';
     dwellStartedAt = 0;
+    dwellProgress = 0;
     setRevealProgress(0);
   }
 
@@ -155,7 +161,9 @@ export function createBallController({ board, input }) {
     position.y = center.y;
     activeCellKey = `${cell.row}:${cell.col}`;
     completedCellKey = activeCellKey;
+    currentCell = cell;
     dwellStartedAt = 0;
+    dwellProgress = 0;
     setRevealProgress(0);
     ball.classList.remove('ball-unplaced');
     updateBallPosition(position.x, position.y);
@@ -167,8 +175,23 @@ export function createBallController({ board, input }) {
     velocity.y = 0;
     position.x = 0;
     position.y = 0;
+    currentCell = null;
     resetDwell();
     ball.classList.add('ball-unplaced');
+  }
+
+  function getDebugState() {
+    return {
+      isPlaced,
+      x: position.x,
+      y: position.y,
+      vx: velocity.x,
+      vy: velocity.y,
+      speed: Math.hypot(velocity.x, velocity.y),
+      cell: currentCell,
+      activeCellKey,
+      dwellProgress,
+    };
   }
 
   return {
@@ -177,6 +200,7 @@ export function createBallController({ board, input }) {
     placeAtCell,
     start,
     reset,
+    getDebugState,
     updateBallPosition,
   };
 }

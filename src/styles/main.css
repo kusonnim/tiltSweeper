@@ -71,6 +71,11 @@ body {
   background: #364150;
 }
 
+.cell-active {
+  outline: 2px solid #f6d365;
+  outline-offset: -3px;
+}
+
 .cell-revealed {
   background: #1b2027;
   color: #e9edf2;
@@ -154,4 +159,25 @@ body {
 
 .restart-button:hover {
   background: #dfe8ef;
+}
+
+.debug-panel {
+  display: grid;
+  width: min(92vw, 520px);
+  gap: 6px;
+  border: 1px solid #3f4651;
+  background: #101319;
+  color: #d8e0e8;
+  font: 12px / 1.35 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  padding: 10px;
+}
+
+.debug-panel div {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 8px;
+}
+
+.debug-panel strong {
+  color: #f6d365;
 }

@@ -60,6 +60,18 @@ export function createMinesweeperGame() {
       game.isInitialized = false;
       game.status = 'ready';
     },
+    getDebugState() {
+      const cells = game.board.flat();
+
+      return {
+        status: game.status,
+        isInitialized: game.isInitialized,
+        opened: cells.filter((cell) => cell.isRevealed).length,
+        flags: cells.filter((cell) => cell.isFlagged).length,
+        mines: cells.filter((cell) => cell.isMine).length,
+        safeCells: cells.filter((cell) => !cell.isMine).length,
+      };
+    },
   };
 
   return game;

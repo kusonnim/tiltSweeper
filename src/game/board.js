@@ -6,6 +6,7 @@ export function createBoardView(
     onBallPlace = () => {},
     onCellReveal = () => {},
     onFlagToggle = () => {},
+    getActiveCell = () => null,
   } = {},
 ) {
   const element = document.createElement('main');
@@ -18,7 +19,12 @@ export function createBoardView(
       for (let col = 0; col < game.cols; col += 1) {
         const cell = document.createElement('button');
         const boardCell = game.board[row][col];
-        cell.className = getCellClassName(boardCell, debug);
+        const activeCell = getActiveCell();
+        cell.className = getCellClassName(
+          boardCell,
+          debug,
+          activeCell?.row === row && activeCell?.col === col,
+        );
         cell.type = 'button';
         cell.dataset.row = String(row);
         cell.dataset.col = String(col);
@@ -82,6 +88,17 @@ export function createBoardView(
     return Boolean(cell && !cell.isRevealed && !cell.isFlagged && game.status !== 'lost' && game.status !== 'won');
   }
 
+  function updateActiveCell(activeCell) {
+    for (const cell of element.querySelectorAll('.cell-active')) {
+      cell.classList.remove('cell-active');
+    }
+
+    if (!activeCell) return;
+
+    const cell = element.querySelector(`[data-row="${activeCell.row}"][data-col="${activeCell.col}"]`);
+    cell?.classList.add('cell-active');
+  }
+
   return {
     element,
     render,
@@ -89,11 +106,16 @@ export function createBoardView(
     getCellCenter,
     getBounds,
     isCellRevealable,
+    updateActiveCell,
   };
 }
 
-function getCellClassName(cell, debug) {
+function getCellClassName(cell, debug, isActive) {
   const classNames = ['cell'];
+
+  if (isActive) {
+    classNames.push('cell-active');
+  }
 
   if (cell.isRevealed) {
     classNames.push('cell-revealed');

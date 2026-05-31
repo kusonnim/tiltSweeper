@@ -6,6 +6,7 @@ import { createInputController } from './game/input.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
 import { isDebugMode } from './debug/debug.js';
+import { createDebugPanel } from './debug/debugPanel.js';
 
 const app = document.querySelector('#app');
 const debug = isDebugMode();
@@ -13,6 +14,7 @@ const debug = isDebugMode();
 const game = createMinesweeperGame();
 let ball;
 let isBallPlaced = false;
+let debugPanel;
 
 const board = createBoardView(game, {
   debug,
@@ -20,6 +22,7 @@ const board = createBoardView(game, {
   onBallPlace: placeBall,
   onCellReveal: revealCell,
   onFlagToggle: toggleFlag,
+  getActiveCell: () => ball?.getDebugState().cell,
 });
 const input = createInputController();
 const hud = createHud(game, {
@@ -31,6 +34,10 @@ const screens = createScreens(game, { onRestart: restartGame });
 app.append(hud.element, board.element, screens.element);
 
 ball = createBallController({ board, input });
+debugPanel = debug ? createDebugPanel({ game, ball, input }) : null;
+if (debugPanel) {
+  app.append(debugPanel.element);
+}
 
 ball.onEnterCell(revealCell);
 input.onStatusChange(renderGame);
@@ -42,6 +49,7 @@ function renderGame() {
   }
   hud.render();
   screens.render();
+  debugPanel?.render();
 }
 
 function revealCell(cell) {
@@ -74,4 +82,10 @@ async function enableTilt() {
 }
 
 renderGame();
+if (debugPanel) {
+  setInterval(() => {
+    board.updateActiveCell(ball.getDebugState().cell);
+    debugPanel.render();
+  }, 120);
+}
 ball.start();

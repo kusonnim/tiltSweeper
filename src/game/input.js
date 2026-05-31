@@ -82,6 +82,16 @@ export function createInputController() {
     return tilt.status;
   }
 
+  function getDebugState() {
+    return {
+      status: tilt.status,
+      enabled: tilt.enabled,
+      gamma: tilt.gamma,
+      beta: tilt.beta,
+      direction: getDirection(),
+    };
+  }
+
   function onStatusChange(callback) {
     onStatusChangeCallback = callback;
   }
@@ -137,6 +147,7 @@ export function createInputController() {
     start,
     enableTilt,
     getDirection,
+    getDebugState,
     getStatus,
     onStatusChange,
   };
