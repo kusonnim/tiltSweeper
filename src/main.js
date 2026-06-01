@@ -33,6 +33,7 @@ let difficultyId = storedDifficulty.id;
 let lastHazardHapticKey = '';
 let isPaused = false;
 let pausedAt = 0;
+let currentLives = modeSettings.instantLives;
 game.reset(storedDifficulty.config);
 
 const board = createBoardView(game, {
@@ -55,6 +56,8 @@ const hazards = createDynamicHazards({
   getSettings: () => modeSettings,
 });
 const hud = createHud(game, {
+  getLives: () => currentLives,
+  getModeSettings: () => modeSettings,
   getPaused: () => isPaused,
   input,
   onPauseToggle: togglePause,
@@ -124,6 +127,7 @@ function renderGame() {
   board.render();
   if (ball) {
     board.element.append(ball.element);
+    updateBallLives();
   }
   hud.render();
   settingsPanel.render();
@@ -161,6 +165,7 @@ function restartGame() {
   resumeFromPause();
   game.reset();
   resetHazards();
+  resetLives();
   board.resetCamera();
   isBallPlaced = false;
   ball.reset();
@@ -181,6 +186,7 @@ function resetWithConfig(config) {
   resumeFromPause();
   game.reset(config);
   resetHazards();
+  resetLives();
   storeDifficulty(difficultyId, { rows: game.rows, cols: game.cols, mines: game.mines });
   board.resetCamera();
   isBallPlaced = false;
@@ -238,15 +244,22 @@ function updateModeSettings(settings) {
 
   if (settings.hazardHitMode === 'penalty' || settings.hazardHitMode === 'instant') {
     modeSettings.hazardHitMode = settings.hazardHitMode;
+    resetLives();
   }
 
   if (settings.customHazardCount !== undefined) {
     modeSettings.customHazardCount = clampInteger(settings.customHazardCount, 1, 10, modeSettings.customHazardCount);
   }
 
+  if (settings.instantLives !== undefined) {
+    modeSettings.instantLives = clampInteger(settings.instantLives, 1, 10, modeSettings.instantLives);
+    resetLives();
+  }
+
   localStorage.setItem(MODE_STORAGE_KEY, JSON.stringify(modeSettings));
   resetHazards();
   board.updateHazardCells();
+  hud.render();
   settingsPanel.render();
 }
 
@@ -304,6 +317,17 @@ function handleHazardHit(cell) {
   }
 
   if (modeSettings.hazardHitMode === 'instant') {
+    if (currentLives > 1) {
+      currentLives -= 1;
+      ball.stun(760);
+      ball.makeInvincible(1500);
+      haptics.trigger('lose');
+      updateBallLives();
+      hud.render();
+      return;
+    }
+
+    currentLives = 0;
     game.failAt(cell);
     resetHazards();
     renderGame();
@@ -314,6 +338,22 @@ function handleHazardHit(cell) {
   ball.stun(760);
   ball.makeInvincible(1500);
   haptics.trigger('lose');
+}
+
+function resetLives() {
+  currentLives = modeSettings.instantLives;
+  updateBallLives();
+}
+
+function updateBallLives() {
+  if (!ball) return;
+
+  if (modeSettings.mode === 'dynamic' && modeSettings.hazardHitMode === 'instant') {
+    ball.setLives(currentLives, modeSettings.instantLives);
+    return;
+  }
+
+  ball.hideLives();
 }
 
 function triggerDebugHazard() {
@@ -439,6 +479,7 @@ function getStoredModeSettings() {
       ...JSON.parse(localStorage.getItem(MODE_STORAGE_KEY)),
     };
     storedSettings.customHazardCount = clampInteger(storedSettings.customHazardCount, 1, 10, DYNAMIC_MODE_SETTINGS.customHazardCount);
+    storedSettings.instantLives = clampInteger(storedSettings.instantLives, 1, 10, DYNAMIC_MODE_SETTINGS.instantLives);
     return storedSettings;
   } catch {
     return { ...DYNAMIC_MODE_SETTINGS };

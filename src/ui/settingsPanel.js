@@ -81,6 +81,11 @@ export function createSettingsPanel({
             <button class="${modeSettings.hazardHitMode === 'instant' ? 'settings-chip settings-chip-active' : 'settings-chip'}" data-hit-mode="instant" type="button">Instant death</button>
           </div>
           ${
+            modeSettings.hazardHitMode === 'instant'
+              ? `<label class="settings-range">Lives <input name="instantLives" type="range" min="1" max="10" step="1" value="${modeSettings.instantLives}" /><span>${modeSettings.instantLives}</span></label>`
+              : ''
+          }
+          ${
             isCustomDifficulty
               ? `<label class="settings-range">Patterns <input name="customHazardCount" type="range" min="1" max="10" step="1" value="${modeSettings.customHazardCount}" /><span>${modeSettings.customHazardCount}</span></label>`
               : `<span class="settings-note">Patterns ${getPresetHazardCount(activeDifficultyId)}</span>`
@@ -187,6 +192,12 @@ export function createSettingsPanel({
     customHazards?.addEventListener('input', () => {
       onModeSettingsChange({ customHazardCount: customHazards.value });
       customHazards.nextElementSibling.textContent = customHazards.value;
+    });
+
+    const instantLives = element.querySelector('[name="instantLives"]');
+    instantLives?.addEventListener('input', () => {
+      onModeSettingsChange({ instantLives: instantLives.value });
+      instantLives.nextElementSibling.textContent = instantLives.value;
     });
   }
 

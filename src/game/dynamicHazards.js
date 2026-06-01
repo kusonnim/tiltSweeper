@@ -25,6 +25,7 @@ const BOX_LASER_STAGGER_MS = 180;
 
 export const DYNAMIC_MODE_SETTINGS = {
   customHazardCount: 4,
+  instantLives: 1,
   mode: 'classic',
   hazardHitMode: 'penalty',
 };

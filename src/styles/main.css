@@ -964,7 +964,7 @@ body[data-theme="garden"] .cell.cell-hazard-active:hover {
   height: 28px;
   border-radius: 50%;
   pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--cyan) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--life-color, var(--cyan)) 72%, transparent);
   background: var(--cell);
   box-shadow:
     0 10px 18px rgb(0 0 0 / 48%),
@@ -985,10 +985,14 @@ body[data-theme="garden"] .cell.cell-hazard-active:hover {
 
 .ball::before {
   position: absolute;
-  inset: 7px;
-  border: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, var(--life-color, var(--cyan)) 42%, transparent);
   border-radius: 50%;
+  background: conic-gradient(var(--life-color, var(--cyan)) var(--life-progress), transparent 0deg);
   content: "";
+  opacity: 0.95;
+  -webkit-mask: radial-gradient(circle, transparent 48%, #000 52%);
+  mask: radial-gradient(circle, transparent 48%, #000 52%);
 }
 
 .ball-unplaced {
@@ -1005,6 +1009,24 @@ body[data-theme="garden"] .cell.cell-hazard-active:hover {
 
 .ball-invincible {
   opacity: 0.72;
+}
+
+.ball-life-hidden::before {
+  opacity: 0;
+}
+
+.ball-life-critical {
+  animation: ball-life-critical 740ms ease-in-out infinite alternate;
+}
+
+@keyframes ball-life-critical {
+  from {
+    filter: none;
+  }
+
+  to {
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--red) 42%, transparent));
+  }
 }
 
 @keyframes ball-impact {

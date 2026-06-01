@@ -30,6 +30,8 @@ export function createBallController({
   const ball = document.createElement('div');
   ball.className = 'ball ball-unplaced';
   ball.style.setProperty('--reveal-progress', '0deg');
+  ball.style.setProperty('--life-progress', '0deg');
+  ball.style.setProperty('--life-color', 'var(--cyan)');
   board.element.append(ball);
 
   function onEnterCell(callback) {
@@ -183,6 +185,24 @@ export function createBallController({
     ball.style.setProperty('--reveal-progress', `${Math.round(progress * 360)}deg`);
   }
 
+  function setLives(currentLives, maxLives) {
+    const max = Math.max(1, Number(maxLives) || 1);
+    const current = Math.max(0, Math.min(max, Number(currentLives) || 0));
+    const ratio = current / max;
+    const color = ratio > 0.55 ? '#70ffba' : ratio > 0.25 ? 'var(--amber)' : 'var(--red)';
+
+    ball.style.setProperty('--life-progress', `${Math.round(ratio * 360)}deg`);
+    ball.style.setProperty('--life-color', color);
+    ball.classList.toggle('ball-life-critical', ratio > 0 && ratio <= 0.25);
+    ball.classList.toggle('ball-life-hidden', current === 0);
+  }
+
+  function hideLives() {
+    ball.style.setProperty('--life-progress', '0deg');
+    ball.classList.remove('ball-life-critical');
+    ball.classList.add('ball-life-hidden');
+  }
+
   function placeAtCell(cell) {
     const center = board.getCellCenter(cell.row, cell.col);
     if (!center) return;
@@ -307,8 +327,10 @@ export function createBallController({
     start,
     reset,
     getDebugState,
+    hideLives,
     knockbackFromCell,
     makeInvincible,
+    setLives,
     shiftTimers,
     stun,
     updateBallPosition,

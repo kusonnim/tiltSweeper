@@ -1,4 +1,15 @@
-export function createHud(game, { getPaused = () => false, input, onPauseToggle = () => {}, onSettingsOpen = () => {}, onTiltRequest = () => {} } = {}) {
+export function createHud(
+  game,
+  {
+    getLives = () => null,
+    getModeSettings = () => null,
+    getPaused = () => false,
+    input,
+    onPauseToggle = () => {},
+    onSettingsOpen = () => {},
+    onTiltRequest = () => {},
+  } = {},
+) {
   const element = document.createElement('header');
   element.className = 'hud';
 
@@ -13,6 +24,12 @@ export function createHud(game, { getPaused = () => false, input, onPauseToggle 
 
     const mines = document.createElement('span');
     mines.textContent = `${game.mines} mines`;
+
+    const lives = document.createElement('span');
+    const modeSettings = getModeSettings();
+    const currentLives = getLives();
+    lives.textContent = `Lives ${currentLives}`;
+    lives.hidden = modeSettings?.mode !== 'dynamic' || modeSettings?.hazardHitMode !== 'instant';
 
     const hint = document.createElement('span');
     hint.className = 'hud-hint';
@@ -40,7 +57,7 @@ export function createHud(game, { getPaused = () => false, input, onPauseToggle 
     tiltButton.disabled = ['waiting', 'active'].includes(tiltStatus);
     tiltButton.addEventListener('click', onTiltRequest);
 
-    element.append(title, size, mines, hint, settingsButton, pauseButton, tiltButton);
+    element.append(title, size, mines, lives, hint, settingsButton, pauseButton, tiltButton);
   }
 
   return {
