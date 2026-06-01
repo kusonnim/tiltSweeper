@@ -11,6 +11,7 @@ export function createBoardView(
     onCellReveal = () => {},
     onFlagToggle = () => {},
     getActiveCell = () => null,
+    getHazardState = () => 'idle',
   } = {},
 ) {
   const element = document.createElement('main');
@@ -39,6 +40,7 @@ export function createBoardView(
           activeCell?.row === row && activeCell?.col === col,
           (row + col) % 2 === 0,
           Boolean(winOrigin),
+          getHazardState(row, col),
         );
         if (winOrigin) {
           cell.style.animationDelay = `${getCellDistanceDelay(row, col, winOrigin, 55)}ms`;
@@ -181,6 +183,14 @@ export function createBoardView(
     cell?.classList.add('cell-active');
   }
 
+  function updateHazardCells() {
+    for (const cell of grid.querySelectorAll('.cell')) {
+      const row = Number.parseInt(cell.dataset.row, 10);
+      const col = Number.parseInt(cell.dataset.col, 10);
+      applyHazardClass(cell, getHazardState(row, col));
+    }
+  }
+
   function playWinPulse(origin) {
     playCellWave(grid.querySelectorAll('.cell'), origin, {
       className: 'cell-win-pulse',
@@ -212,12 +222,10 @@ export function createBoardView(
   }
 
   function getMetrics() {
-    const firstCell = grid.querySelector('.cell');
-    const cellRect = firstCell?.getBoundingClientRect();
     const styles = getComputedStyle(grid);
     const gapX = parseFloat(styles.columnGap) || 0;
     const gapY = parseFloat(styles.rowGap) || 0;
-    const cellSize = cellRect?.width || 0;
+    const cellSize = getGridTrackSize(styles);
 
     return {
       cellSize,
@@ -245,11 +253,12 @@ export function createBoardView(
     resetCamera,
     updateCamera,
     updateActiveCell,
+    updateHazardCells,
     worldToViewport,
   };
 }
 
-function getCellClassName(cell, debug, isActive, isLightSquare, isWinCelebrating) {
+function getCellClassName(cell, debug, isActive, isLightSquare, isWinCelebrating, hazardState) {
   const classNames = ['cell'];
 
   classNames.push(isLightSquare ? 'cell-light' : 'cell-dark');
@@ -278,7 +287,30 @@ function getCellClassName(cell, debug, isActive, isLightSquare, isWinCelebrating
     classNames.push('cell-win-pulse');
   }
 
+  if (hazardState === 'warning') {
+    classNames.push('cell-hazard-warning');
+  }
+
+  if (hazardState === 'warning-pending') {
+    classNames.push('cell-hazard-pending');
+  }
+
+  if (hazardState === 'active' || hazardState === 'active-pop') {
+    classNames.push('cell-hazard-active');
+  }
+
+  if (hazardState === 'active-pop') {
+    classNames.push('cell-hazard-active-pop');
+  }
+
   return classNames.join(' ');
+}
+
+function applyHazardClass(cell, hazardState) {
+  cell.classList.toggle('cell-hazard-pending', hazardState === 'warning-pending');
+  cell.classList.toggle('cell-hazard-warning', hazardState === 'warning');
+  cell.classList.toggle('cell-hazard-active', hazardState === 'active' || hazardState === 'active-pop');
+  cell.classList.toggle('cell-hazard-active-pop', hazardState === 'active-pop');
 }
 
 function getCellText(cell, debug) {
@@ -293,4 +325,15 @@ function getCellText(cell, debug) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function getGridTrackSize(styles) {
+  const firstColumn = styles.gridTemplateColumns.split(' ')[0];
+  const parsedColumn = parseFloat(firstColumn);
+
+  if (Number.isFinite(parsedColumn)) {
+    return parsedColumn;
+  }
+
+  return 0;
 }

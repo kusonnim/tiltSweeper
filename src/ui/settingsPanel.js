@@ -5,11 +5,13 @@ export function createSettingsPanel({
   getDifficultyId,
   getHapticsEnabled,
   getInputSettings,
+  getModeSettings,
   getThemeId,
   onClose = () => {},
   onCustom = () => {},
   onHapticsToggle = () => {},
   onInputSettingsChange = () => {},
+  onModeSettingsChange = () => {},
   onPreset = () => {},
   onRecalibrate = () => {},
   onThemeSelect = () => {},
@@ -35,6 +37,7 @@ export function createSettingsPanel({
     const config = getConfig();
     const activeDifficultyId = getDifficultyId();
     const inputSettings = getInputSettings();
+    const modeSettings = getModeSettings();
     const activeThemeId = getThemeId();
 
     element.className = isOpen ? 'settings-panel' : 'settings-panel settings-panel-hidden';
@@ -62,6 +65,17 @@ export function createSettingsPanel({
           </form>
         </section>
         <section class="settings-group">
+          <strong>Mode</strong>
+          <div class="settings-options">
+            <button class="${modeSettings.mode === 'classic' ? 'settings-chip settings-chip-active' : 'settings-chip'}" data-mode="classic" type="button">Classic</button>
+            <button class="${modeSettings.mode === 'dynamic' ? 'settings-chip settings-chip-active' : 'settings-chip'}" data-mode="dynamic" type="button">Dynamic</button>
+          </div>
+          <div class="settings-options">
+            <button class="${modeSettings.hazardHitMode === 'penalty' ? 'settings-chip settings-chip-active' : 'settings-chip'}" data-hit-mode="penalty" type="button">Penalty</button>
+            <button class="${modeSettings.hazardHitMode === 'instant' ? 'settings-chip settings-chip-active' : 'settings-chip'}" data-hit-mode="instant" type="button">Instant death</button>
+          </div>
+        </section>
+        <section class="settings-group">
           <strong>Theme</strong>
           <div class="settings-options" data-role="themes"></div>
         </section>
@@ -84,6 +98,7 @@ export function createSettingsPanel({
     renderThemeButtons(element.querySelector('[data-role="themes"]'), themes, activeThemeId);
     bindCustomForm(element.querySelector('.settings-custom'));
     bindControlSettings();
+    bindModeSettings();
   }
 
   function renderDifficultyButtons(container, activeDifficultyId) {
@@ -139,6 +154,16 @@ export function createSettingsPanel({
     });
     haptics?.addEventListener('change', () => onHapticsToggle(haptics.checked));
     element.querySelector('[data-action="recalibrate"]')?.addEventListener('click', onRecalibrate);
+  }
+
+  function bindModeSettings() {
+    for (const button of element.querySelectorAll('[data-mode]')) {
+      button.addEventListener('click', () => onModeSettingsChange({ mode: button.dataset.mode }));
+    }
+
+    for (const button of element.querySelectorAll('[data-hit-mode]')) {
+      button.addEventListener('click', () => onModeSettingsChange({ hazardHitMode: button.dataset.hitMode }));
+    }
   }
 
   function handleBackdropPointerDown(event) {

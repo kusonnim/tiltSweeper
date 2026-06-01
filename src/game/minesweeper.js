@@ -71,6 +71,13 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
 
       cell.isFlagged = !cell.isFlagged;
     },
+    failAt(cell) {
+      if (game.status === 'lost' || game.status === 'won') return;
+
+      game.lastExplodedCell = cell ? { row: cell.row, col: cell.col } : null;
+      revealAllMines(game.board);
+      game.status = 'lost';
+    },
     reset(nextConfig) {
       const config = normalizeConfig(nextConfig ?? game);
       game.rows = config.rows;

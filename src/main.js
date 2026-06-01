@@ -1,4 +1,5 @@
 import './styles/main.css';
+import { DYNAMIC_MODE_SETTINGS, createDynamicHazards } from './game/dynamicHazards.js';
 import { createMinesweeperGame } from './game/minesweeper.js';
 import { createBoardView } from './game/board.js';
 import { createBallController } from './game/ball.js';
@@ -13,6 +14,7 @@ import { isDebugMode } from './debug/debug.js';
 import { createDebugPanel } from './debug/debugPanel.js';
 
 const DIFFICULTY_STORAGE_KEY = 'minesweeper-tilt-difficulty';
+const MODE_STORAGE_KEY = 'minesweeper-tilt-mode';
 const app = document.querySelector('#app');
 const debug = isDebugMode();
 const theme = createThemeController();
@@ -23,6 +25,7 @@ if (debug) {
 
 const game = createMinesweeperGame();
 const storedDifficulty = getStoredDifficulty();
+const modeSettings = getStoredModeSettings();
 let ball;
 let isBallPlaced = false;
 let debugPanel;
@@ -36,9 +39,15 @@ const board = createBoardView(game, {
   onCellReveal: revealCell,
   onFlagToggle: toggleFlag,
   getActiveCell: () => ball?.getDebugState().cell,
+  getHazardState: getHazardState,
 });
 const input = createInputController();
 const haptics = createHapticsController();
+const hazards = createDynamicHazards({
+  getRows: () => game.rows,
+  getCols: () => game.cols,
+  getSettings: () => modeSettings,
+});
 const hud = createHud(game, {
   input,
   onSettingsOpen: openSettings,
@@ -50,11 +59,13 @@ const settingsPanel = createSettingsPanel({
   getDifficultyId: () => difficultyId,
   getHapticsEnabled: () => haptics.isEnabled(),
   getInputSettings: () => input.getSettings(),
+  getModeSettings: () => ({ ...modeSettings }),
   getThemeId: () => theme.getTheme(),
   onPreset: applyPresetDifficulty,
   onCustom: applyCustomDifficulty,
   onHapticsToggle: setHapticsEnabled,
   onInputSettingsChange: updateInputSettings,
+  onModeSettingsChange: updateModeSettings,
   onRecalibrate: recalibrateTilt,
   onThemeSelect: selectTheme,
   themes: theme.themes,
@@ -66,9 +77,17 @@ const uiState = {
 
 app.append(hud.element, board.element, screens.element, settingsPanel.element);
 
-ball = createBallController({ board, input });
+ball = createBallController({ board, input, getHazardHit: isHazardHit, onHazardHit: handleHazardHit });
 debugPanel = debug
-  ? createDebugPanel({ game, ball, input, onWinPulseTest: playDebugWinPulse, onLosePulseTest: playDebugLosePulse })
+  ? createDebugPanel({
+      game,
+      ball,
+      input,
+      hazards,
+      onHazardTest: triggerDebugHazard,
+      onWinPulseTest: playDebugWinPulse,
+      onLosePulseTest: playDebugLosePulse,
+    })
   : null;
 if (debugPanel) {
   app.append(debugPanel.element);
@@ -103,6 +122,7 @@ function revealCell(cell) {
 
 function placeBall(cell) {
   isBallPlaced = true;
+  hazards.reset();
   ball.placeAtCell(cell);
   revealCell(cell);
 }
@@ -115,6 +135,7 @@ function toggleFlag(cell) {
 
 function restartGame() {
   game.reset();
+  hazards.reset();
   board.resetCamera();
   isBallPlaced = false;
   ball.reset();
@@ -133,6 +154,7 @@ function applyCustomDifficulty(config) {
 
 function resetWithConfig(config) {
   game.reset(config);
+  hazards.reset();
   storeDifficulty(difficultyId, { rows: game.rows, cols: game.cols, mines: game.mines });
   board.resetCamera();
   isBallPlaced = false;
@@ -157,6 +179,21 @@ function selectTheme(themeId) {
 
 function updateInputSettings(settings) {
   input.updateSettings(settings);
+  settingsPanel.render();
+}
+
+function updateModeSettings(settings) {
+  if (settings.mode === 'classic' || settings.mode === 'dynamic') {
+    modeSettings.mode = settings.mode;
+  }
+
+  if (settings.hazardHitMode === 'penalty' || settings.hazardHitMode === 'instant') {
+    modeSettings.hazardHitMode = settings.hazardHitMode;
+  }
+
+  localStorage.setItem(MODE_STORAGE_KEY, JSON.stringify(modeSettings));
+  hazards.reset();
+  board.updateHazardCells();
   settingsPanel.render();
 }
 
@@ -187,6 +224,37 @@ function playLoseEffect(cell) {
   haptics.trigger('lose');
 }
 
+function getHazardState(row, col) {
+  return modeSettings.mode === 'dynamic' ? hazards.getCellState(row, col) : 'idle';
+}
+
+function isHazardHit(cell) {
+  return modeSettings.mode === 'dynamic' && hazards.isCellActive(cell) && game.status !== 'lost' && game.status !== 'won';
+}
+
+function handleHazardHit(cell) {
+  if (modeSettings.hazardHitMode === 'instant') {
+    game.failAt(cell);
+    hazards.reset();
+    renderGame();
+    playLoseEffect(cell);
+    return;
+  }
+
+  ball.stun(760);
+  ball.makeInvincible(1500);
+  haptics.trigger('lose');
+}
+
+function triggerDebugHazard() {
+  if (modeSettings.mode !== 'dynamic') {
+    updateModeSettings({ mode: 'dynamic' });
+  }
+
+  hazards.triggerRandom();
+  board.updateHazardCells();
+}
+
 renderGame();
 if (debugPanel) {
   setInterval(() => {
@@ -194,6 +262,12 @@ if (debugPanel) {
     debugPanel.update();
   }, 120);
 }
+setInterval(() => {
+  if (modeSettings.mode !== 'dynamic' || !isBallPlaced || game.status === 'lost' || game.status === 'won') return;
+
+  hazards.update();
+  board.updateHazardCells();
+}, 80);
 ball.start();
 
 function getStoredDifficulty() {
@@ -230,4 +304,15 @@ function storeDifficulty(id, config) {
       },
     }),
   );
+}
+
+function getStoredModeSettings() {
+  try {
+    return {
+      ...DYNAMIC_MODE_SETTINGS,
+      ...JSON.parse(localStorage.getItem(MODE_STORAGE_KEY)),
+    };
+  } catch {
+    return { ...DYNAMIC_MODE_SETTINGS };
+  }
 }

@@ -4,7 +4,7 @@ const FRICTION = 0.94;
 const MAX_SPEED = 4.2;
 const DWELL_DURATION_MS = 650;
 
-export function createBallController({ board, input }) {
+export function createBallController({ board, input, getHazardHit = () => false, onHazardHit = () => {} }) {
   const position = { x: 0, y: 0 };
   const velocity = { x: 0, y: 0 };
   let activeCellKey = '';
@@ -14,6 +14,9 @@ export function createBallController({ board, input }) {
   let dwellProgress = 0;
   let onEnterCellCallback = () => {};
   let isPlaced = false;
+  let stunnedUntil = 0;
+  let invincibleUntil = 0;
+  let lastHazardHitAt = 0;
   let animationFrameId = 0;
 
   const ball = document.createElement('div');
@@ -42,6 +45,12 @@ export function createBallController({ board, input }) {
   }
 
   function applyInput() {
+    if (performance.now() < stunnedUntil) {
+      velocity.x *= 0.72;
+      velocity.y *= 0.72;
+      return;
+    }
+
     const direction = input.getDirection();
     velocity.x += direction.x * ACCELERATION;
     velocity.y += direction.y * ACCELERATION;
@@ -102,6 +111,7 @@ export function createBallController({ board, input }) {
     }
 
     currentCell = cell;
+    checkHazardHit(cell);
 
     if (!board.isCellRevealable(cell.row, cell.col)) {
       resetDwell();
@@ -178,6 +188,9 @@ export function createBallController({ board, input }) {
     position.x = 0;
     position.y = 0;
     currentCell = null;
+    stunnedUntil = 0;
+    invincibleUntil = 0;
+    lastHazardHitAt = 0;
     resetDwell();
     ball.classList.add('ball-unplaced');
   }
@@ -188,6 +201,33 @@ export function createBallController({ board, input }) {
     ball.classList.remove('ball-impact');
     void ball.offsetWidth;
     ball.classList.add('ball-impact');
+  }
+
+  function stun(durationMs = 650) {
+    stunnedUntil = performance.now() + durationMs;
+    velocity.x = 0;
+    velocity.y = 0;
+    resetDwell();
+    playImpact();
+  }
+
+  function makeInvincible(durationMs = 1400) {
+    invincibleUntil = performance.now() + durationMs;
+    ball.classList.add('ball-invincible');
+    setTimeout(() => {
+      if (performance.now() >= invincibleUntil) {
+        ball.classList.remove('ball-invincible');
+      }
+    }, durationMs);
+  }
+
+  function checkHazardHit(cell) {
+    const now = performance.now();
+    if (now < invincibleUntil) return;
+    if (now - lastHazardHitAt < 900 || !getHazardHit(cell)) return;
+
+    lastHazardHitAt = now;
+    onHazardHit(cell);
   }
 
   function getDebugState() {
@@ -201,6 +241,8 @@ export function createBallController({ board, input }) {
       cell: currentCell,
       activeCellKey,
       dwellProgress,
+      invincible: performance.now() < invincibleUntil,
+      stunned: performance.now() < stunnedUntil,
     };
   }
 
@@ -212,6 +254,8 @@ export function createBallController({ board, input }) {
     start,
     reset,
     getDebugState,
+    makeInvincible,
+    stun,
     updateBallPosition,
   };
 }

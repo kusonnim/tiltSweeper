@@ -1,4 +1,12 @@
-export function createDebugPanel({ game, ball, input, onWinPulseTest = () => {}, onLosePulseTest = () => {} }) {
+export function createDebugPanel({
+  game,
+  ball,
+  input,
+  hazards = null,
+  onHazardTest = () => {},
+  onWinPulseTest = () => {},
+  onLosePulseTest = () => {},
+}) {
   const element = document.createElement('aside');
   element.className = 'debug-panel';
   const fields = new Map();
@@ -17,6 +25,7 @@ export function createDebugPanel({ game, ball, input, onWinPulseTest = () => {},
     appendRow('game', 'Game');
     appendRow('cells', 'Cells');
     appendRow('exploded', 'Exploded');
+    appendRow('hazard', 'Hazard');
 
     const actions = document.createElement('section');
     actions.className = 'debug-actions';
@@ -31,7 +40,13 @@ export function createDebugPanel({ game, ball, input, onWinPulseTest = () => {},
     loseButton.type = 'button';
     addDebugAction(loseButton, () => onLosePulseTest(ball.getDebugState().cell));
 
-    actions.append(winButton, loseButton);
+    const hazardButton = document.createElement('button');
+    hazardButton.className = 'debug-action debug-action-danger';
+    hazardButton.type = 'button';
+    hazardButton.textContent = 'Trigger hazard';
+    addDebugAction(hazardButton, onHazardTest);
+
+    actions.append(winButton, loseButton, hazardButton);
     element.append(actions);
     update();
   }
@@ -52,6 +67,7 @@ export function createDebugPanel({ game, ball, input, onWinPulseTest = () => {},
     setField('game', `${gameState.status} / initialized: ${gameState.isInitialized ? 'yes' : 'no'}`);
     setField('cells', `opened ${gameState.opened}, flags ${gameState.flags}, mines ${gameState.mines}`);
     setField('exploded', formatCell(gameState.lastExplodedCell));
+    setField('hazard', formatHazard(hazards?.getDebugState()));
 
     updateButton(winButton, hasCell, 'Win pulse test');
     updateButton(loseButton, hasCell, 'Lose shock test');
@@ -114,4 +130,18 @@ function formatNumber(value) {
 
 function formatPercent(value) {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatHazard(state) {
+  if (!state) return '-';
+  if (!state.hazard) return `${state.mode} / ${state.hitMode} / idle`;
+  return `${state.mode} / ${state.hitMode} / ${state.hazard.axis} ${state.hazard.index} ${formatDirection(state.hazard)} ${state.hazard.phase}`;
+}
+
+function formatDirection(hazard) {
+  if (hazard.axis === 'row') {
+    return hazard.direction === 1 ? 'right' : 'left';
+  }
+
+  return hazard.direction === 1 ? 'down' : 'up';
 }
