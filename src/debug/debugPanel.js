@@ -1,6 +1,7 @@
 export function createDebugPanel({
   game,
   ball,
+  haptics = null,
   input,
   hazards = null,
   onHazardTest = () => {},
@@ -26,6 +27,7 @@ export function createDebugPanel({
     appendRow('cells', 'Cells');
     appendRow('exploded', 'Exploded');
     appendRow('hazard', 'Hazard');
+    appendRow('haptics', 'Haptics');
 
     const actions = document.createElement('section');
     actions.className = 'debug-actions';
@@ -68,6 +70,7 @@ export function createDebugPanel({
     setField('cells', `opened ${gameState.opened}, flags ${gameState.flags}, mines ${gameState.mines}`);
     setField('exploded', formatCell(gameState.lastExplodedCell));
     setField('hazard', formatHazard(hazards?.getDebugState()));
+    setField('haptics', formatHaptics(haptics));
 
     updateButton(winButton, hasCell, 'Win pulse test');
     updateButton(loseButton, hasCell, 'Lose shock test');
@@ -136,6 +139,11 @@ function formatHazard(state) {
   if (!state) return '-';
   if (!state.hazard) return `${state.mode} / ${state.hitMode} / idle`;
   return `${state.mode} / ${state.hitMode} / ${state.hazard.axis} ${state.hazard.index} ${formatDirection(state.hazard)} ${state.hazard.phase}`;
+}
+
+function formatHaptics(haptics) {
+  if (!haptics) return '-';
+  return `${haptics.isEnabled() ? 'enabled' : 'disabled'} / ${haptics.isSupported() ? 'supported' : 'unsupported'}`;
 }
 
 function formatDirection(hazard) {

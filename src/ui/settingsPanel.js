@@ -4,6 +4,7 @@ export function createSettingsPanel({
   getConfig,
   getDifficultyId,
   getHapticsEnabled,
+  getHapticsSupported,
   getInputSettings,
   getModeSettings,
   getThemeId,
@@ -37,6 +38,7 @@ export function createSettingsPanel({
     const config = getConfig();
     const activeDifficultyId = getDifficultyId();
     const inputSettings = getInputSettings();
+    const hapticsSupported = getHapticsSupported();
     const modeSettings = getModeSettings();
     const activeThemeId = getThemeId();
 
@@ -87,7 +89,8 @@ export function createSettingsPanel({
         </section>
         <section class="settings-group">
           <strong>Feedback</strong>
-          <label class="settings-toggle"><input name="haptics" type="checkbox" ${getHapticsEnabled() ? 'checked' : ''} /> Haptics</label>
+          <label class="settings-toggle"><input name="haptics" type="checkbox" ${getHapticsEnabled() ? 'checked' : ''} ${hapticsSupported ? '' : 'disabled'} /> Haptics</label>
+          <span class="${hapticsSupported ? 'settings-note' : 'settings-note settings-note-warning'}">${hapticsSupported ? 'Vibration API supported' : 'Vibration API not supported'}</span>
         </section>
       </div>
     `;

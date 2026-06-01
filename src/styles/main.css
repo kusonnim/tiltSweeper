@@ -374,6 +374,15 @@ body[data-debug="1"] #app {
   accent-color: var(--amber);
 }
 
+.settings-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-note-warning {
+  color: var(--red);
+}
+
 .board {
   position: relative;
   --cell-size: min(calc((100vw - 32px) / 8), 65px);
