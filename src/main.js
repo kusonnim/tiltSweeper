@@ -281,7 +281,10 @@ if (debugPanel) {
   }, 120);
 }
 setInterval(() => {
-  if (modeSettings.mode !== 'dynamic' || !isBallPlaced || game.status === 'lost' || game.status === 'won') return;
+  if (modeSettings.mode !== 'dynamic' || game.status === 'lost' || game.status === 'won') return;
+
+  const hasManualHazard = Boolean(hazards.getDebugState().hazard);
+  if (!isBallPlaced && !hasManualHazard) return;
 
   hazards.update();
   triggerHazardHaptics();
