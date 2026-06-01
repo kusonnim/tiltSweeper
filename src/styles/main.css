@@ -58,10 +58,12 @@ body[data-theme="chess"] {
   display: grid;
   width: 100%;
   min-height: 100vh;
-  place-items: center;
+  align-content: center;
+  justify-items: center;
   overflow: hidden;
   gap: 16px;
-  padding: 24px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+  padding: 16px max(16px, env(safe-area-inset-right)) max(72px, calc(env(safe-area-inset-bottom) + 56px)) max(16px, env(safe-area-inset-left));
+  transform: translateY(-18px);
 }
 
 .hud {
