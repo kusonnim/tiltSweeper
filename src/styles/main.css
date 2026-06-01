@@ -1217,10 +1217,6 @@ body[data-theme="garden"] .cell.cell-hazard-active:hover {
   animation: ball-impact 620ms ease-out both;
 }
 
-.ball-impact::after {
-  animation: ball-impact-ring 620ms ease-out both;
-}
-
 .ball-invincible {
   opacity: 0.72;
 }
@@ -1249,6 +1245,9 @@ body[data-theme="garden"] .cell.cell-hazard-active:hover {
     width: 28px;
     height: 28px;
     border-color: color-mix(in srgb, var(--cyan) 72%, transparent);
+    box-shadow:
+      0 10px 18px rgb(0 0 0 / 48%),
+      inset 0 0 0 1px rgb(255 255 255 / 4%);
     filter: none;
   }
 
@@ -1256,26 +1255,16 @@ body[data-theme="garden"] .cell.cell-hazard-active:hover {
     width: 34px;
     height: 22px;
     border-color: color-mix(in srgb, var(--red) 86%, transparent);
+    box-shadow:
+      0 0 0 10px color-mix(in srgb, var(--red) 18%, transparent),
+      0 10px 18px rgb(0 0 0 / 48%),
+      inset 0 0 0 1px rgb(255 255 255 / 4%);
     filter: drop-shadow(0 0 12px color-mix(in srgb, var(--red) 48%, transparent));
   }
 
   44% {
     width: 24px;
     height: 34px;
-  }
-}
-
-@keyframes ball-impact-ring {
-  0% {
-    inset: -6px;
-    border-color: color-mix(in srgb, var(--red) 68%, transparent);
-    opacity: 0.95;
-  }
-
-  100% {
-    inset: -24px;
-    border-color: color-mix(in srgb, var(--red) 0%, transparent);
-    opacity: 0;
   }
 }
 
