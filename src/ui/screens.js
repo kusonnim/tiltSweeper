@@ -6,7 +6,7 @@ export function createScreens(game, { onRestart = () => {} } = {}) {
     element.innerHTML = '';
     element.className = `screens screens-${game.status}`;
 
-    const copy = getScreenCopy(game.status, isBallPlaced(), isDebug);
+    const copy = getScreenCopy(game.status, isBallPlaced(), isDebug, game.lossReason);
 
     const text = document.createElement('div');
     text.className = 'screen-copy';
@@ -34,7 +34,7 @@ export function createScreens(game, { onRestart = () => {} } = {}) {
   };
 }
 
-function getScreenCopy(status, isBallPlaced, isDebug) {
+function getScreenCopy(status, isBallPlaced, isDebug, lossReason) {
   if (!isBallPlaced) {
     return {
       title: 'Choose start',
@@ -55,14 +55,25 @@ function getScreenCopy(status, isBallPlaced, isDebug) {
       title: 'Clear',
       detail: 'All safe cells are open.',
     },
-    lost: {
-      title: 'Game over',
-      detail: 'The ball found a mine.',
-    },
+    lost: getLostCopy(lossReason),
   };
 
   return copy[status] ?? {
     title: status,
     detail: '',
+  };
+}
+
+function getLostCopy(lossReason) {
+  if (lossReason === 'hazard') {
+    return {
+      title: 'Game over',
+      detail: 'The ball was caught by a hazard.',
+    };
+  }
+
+  return {
+    title: 'Game over',
+    detail: 'The ball found a mine.',
   };
 }

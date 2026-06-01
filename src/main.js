@@ -151,6 +151,7 @@ function revealCell(cell) {
 function placeBall(cell) {
   isBallPlaced = true;
   resetHazards();
+  input.recalibrateTilt();
   ball.placeAtCell(cell);
   revealCell(cell);
 }
@@ -328,7 +329,7 @@ function handleHazardHit(cell) {
     }
 
     currentLives = 0;
-    game.failAt(cell);
+    game.failAt(cell, 'hazard');
     resetHazards();
     renderGame();
     playLoseEffect(cell);

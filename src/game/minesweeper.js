@@ -24,6 +24,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
     board: createMinefield(initialConfig),
     isInitialized: false,
     lastExplodedCell: null,
+    lossReason: null,
     status: 'ready',
     revealCell(row, col) {
       if (game.status === 'lost' || game.status === 'won') return;
@@ -44,6 +45,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
       if (cell.isMine) {
         cell.isRevealed = true;
         game.lastExplodedCell = { row: cell.row, col: cell.col };
+        game.lossReason = 'mine';
         revealAllMines(game.board);
         game.status = 'lost';
         return;
@@ -71,10 +73,11 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
 
       cell.isFlagged = !cell.isFlagged;
     },
-    failAt(cell) {
+    failAt(cell, reason = 'hazard') {
       if (game.status === 'lost' || game.status === 'won') return;
 
       game.lastExplodedCell = cell ? { row: cell.row, col: cell.col } : null;
+      game.lossReason = reason;
       revealAllMines(game.board);
       game.status = 'lost';
     },
@@ -86,6 +89,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
       game.board = createMinefield(config);
       game.isInitialized = false;
       game.lastExplodedCell = null;
+      game.lossReason = null;
       game.status = 'ready';
     },
     getDebugState() {
@@ -98,6 +102,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
         flags: cells.filter((cell) => cell.isFlagged).length,
         mines: cells.filter((cell) => cell.isMine).length,
         lastExplodedCell: game.lastExplodedCell,
+        lossReason: game.lossReason,
         safeCells: cells.filter((cell) => !cell.isMine).length,
       };
     },
@@ -203,6 +208,7 @@ function revealNeighborCellsFromNumber(game, cell) {
     if (neighbor.isMine) {
       neighbor.isRevealed = true;
       game.lastExplodedCell = { row: neighbor.row, col: neighbor.col };
+      game.lossReason = 'mine';
       revealAllMines(game.board);
       game.status = 'lost';
       return;
