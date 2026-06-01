@@ -1,43 +1,107 @@
 export function createDebugPanel({ game, ball, input, onWinPulseTest = () => {}, onLosePulseTest = () => {} }) {
   const element = document.createElement('aside');
   element.className = 'debug-panel';
+  const fields = new Map();
+  let winButton;
+  let loseButton;
 
   function render() {
+    element.innerHTML = '';
+
+    appendRow('cell', 'Cell');
+    appendRow('ball', 'Ball');
+    appendRow('speed', 'Speed');
+    appendRow('tilt', 'Tilt');
+    appendRow('tiltRaw', 'Tilt raw');
+    appendRow('dwell', 'Dwell');
+    appendRow('game', 'Game');
+    appendRow('cells', 'Cells');
+    appendRow('exploded', 'Exploded');
+
+    const actions = document.createElement('section');
+    actions.className = 'debug-actions';
+
+    winButton = document.createElement('button');
+    winButton.className = 'debug-action';
+    winButton.type = 'button';
+    addDebugAction(winButton, () => onWinPulseTest(ball.getDebugState().cell));
+
+    loseButton = document.createElement('button');
+    loseButton.className = 'debug-action debug-action-danger';
+    loseButton.type = 'button';
+    addDebugAction(loseButton, () => onLosePulseTest(ball.getDebugState().cell));
+
+    actions.append(winButton, loseButton);
+    element.append(actions);
+    update();
+  }
+
+  function update() {
     const gameState = game.getDebugState();
     const ballState = ball.getDebugState();
     const inputState = input.getDebugState();
     const cell = ballState.cell;
+    const hasCell = Boolean(cell);
 
-    element.innerHTML = `
-      <div><strong>Cell</strong><span>${formatCell(cell)}</span></div>
-      <div><strong>Ball</strong><span>${formatNumber(ballState.x)}, ${formatNumber(ballState.y)}</span></div>
-      <div><strong>Speed</strong><span>${formatNumber(ballState.vx)}, ${formatNumber(ballState.vy)} (${formatNumber(ballState.speed)})</span></div>
-      <div><strong>Tilt</strong><span>${inputState.status} / ${formatNumber(inputState.direction.x)}, ${formatNumber(inputState.direction.y)}</span></div>
-      <div><strong>Tilt raw</strong><span>${formatNumber(inputState.gamma)}, ${formatNumber(inputState.beta)}</span></div>
-      <div><strong>Dwell</strong><span>${formatPercent(ballState.dwellProgress)} ${ballState.activeCellKey || ''}</span></div>
-      <div><strong>Game</strong><span>${gameState.status} / initialized: ${gameState.isInitialized ? 'yes' : 'no'}</span></div>
-      <div><strong>Cells</strong><span>opened ${gameState.opened}, flags ${gameState.flags}, mines ${gameState.mines}</span></div>
-      <div><strong>Exploded</strong><span>${formatCell(gameState.lastExplodedCell)}</span></div>
-      <section class="debug-actions">
-        <button class="debug-action" data-action="win" type="button" ${cell ? '' : 'disabled'}>${cell ? 'Win pulse test' : 'Place ball first'}</button>
-        <button class="debug-action debug-action-danger" data-action="lose" type="button" ${cell ? '' : 'disabled'}>${cell ? 'Lose shock test' : 'Place ball first'}</button>
-      </section>
-    `;
+    setField('cell', formatCell(cell));
+    setField('ball', `${formatNumber(ballState.x)}, ${formatNumber(ballState.y)}`);
+    setField('speed', `${formatNumber(ballState.vx)}, ${formatNumber(ballState.vy)} (${formatNumber(ballState.speed)})`);
+    setField('tilt', `${inputState.status} / ${formatNumber(inputState.direction.x)}, ${formatNumber(inputState.direction.y)}`);
+    setField('tiltRaw', `${formatNumber(inputState.gamma)}, ${formatNumber(inputState.beta)}`);
+    setField('dwell', `${formatPercent(ballState.dwellProgress)} ${ballState.activeCellKey || ''}`);
+    setField('game', `${gameState.status} / initialized: ${gameState.isInitialized ? 'yes' : 'no'}`);
+    setField('cells', `opened ${gameState.opened}, flags ${gameState.flags}, mines ${gameState.mines}`);
+    setField('exploded', formatCell(gameState.lastExplodedCell));
 
-    element.querySelector('[data-action="win"]')?.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      onWinPulseTest(cell);
-    });
-    element.querySelector('[data-action="lose"]')?.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      onLosePulseTest(cell);
-    });
+    updateButton(winButton, hasCell, 'Win pulse test');
+    updateButton(loseButton, hasCell, 'Lose shock test');
+  }
+
+  function appendRow(id, label) {
+    const row = document.createElement('div');
+    const title = document.createElement('strong');
+    const value = document.createElement('span');
+
+    title.textContent = label;
+    row.append(title, value);
+    element.append(row);
+    fields.set(id, value);
+  }
+
+  function setField(id, value) {
+    const field = fields.get(id);
+    if (field) {
+      field.textContent = value;
+    }
   }
 
   return {
     element,
     render,
+    update,
   };
+}
+
+function updateButton(button, isEnabled, label) {
+  if (!button) return;
+
+  button.disabled = !isEnabled;
+  button.textContent = isEnabled ? label : 'Place ball first';
+}
+
+function addDebugAction(button, action) {
+  let pointerHandledAt = 0;
+
+  button.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    pointerHandledAt = performance.now();
+    action();
+  });
+
+  button.addEventListener('click', () => {
+    if (performance.now() - pointerHandledAt < 350) return;
+    action();
+  });
 }
 
 function formatCell(cell) {

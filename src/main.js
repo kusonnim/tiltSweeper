@@ -4,12 +4,13 @@ import { createBoardView } from './game/board.js';
 import { createBallController } from './game/ball.js';
 import { createInputController } from './game/input.js';
 import { createHud } from './ui/hud.js';
-import { createDifficultyPanel } from './ui/difficultyPanel.js';
+import { DIFFICULTIES, createDifficultyPanel } from './ui/difficultyPanel.js';
 import { createScreens } from './ui/screens.js';
 import { createThemeController } from './ui/theme.js';
 import { isDebugMode } from './debug/debug.js';
 import { createDebugPanel } from './debug/debugPanel.js';
 
+const DIFFICULTY_STORAGE_KEY = 'minesweeper-tilt-difficulty';
 const app = document.querySelector('#app');
 const debug = isDebugMode();
 const theme = createThemeController();
@@ -19,10 +20,12 @@ if (debug) {
 }
 
 const game = createMinesweeperGame();
+const storedDifficulty = getStoredDifficulty();
 let ball;
 let isBallPlaced = false;
 let debugPanel;
-let difficultyId = 'normal';
+let difficultyId = storedDifficulty.id;
+game.reset(storedDifficulty.config);
 
 const board = createBoardView(game, {
   debug,
@@ -116,6 +119,7 @@ function applyCustomDifficulty(config) {
 
 function resetWithConfig(config) {
   game.reset(config);
+  storeDifficulty(difficultyId, { rows: game.rows, cols: game.cols, mines: game.mines });
   board.resetCamera();
   isBallPlaced = false;
   ball.reset();
@@ -149,7 +153,43 @@ renderGame();
 if (debugPanel) {
   setInterval(() => {
     board.updateActiveCell(ball.getDebugState().cell);
-    debugPanel.render();
+    debugPanel.update();
   }, 120);
 }
 ball.start();
+
+function getStoredDifficulty() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DIFFICULTY_STORAGE_KEY));
+    const preset = DIFFICULTIES.find((difficulty) => difficulty.id === stored?.id);
+
+    if (preset) {
+      return preset;
+    }
+
+    if (stored?.id === 'custom' && stored.config) {
+      return {
+        id: 'custom',
+        config: stored.config,
+      };
+    }
+  } catch {
+    // Ignore invalid user storage and fall back to the default difficulty.
+  }
+
+  return DIFFICULTIES.find((difficulty) => difficulty.id === 'normal') ?? DIFFICULTIES[0];
+}
+
+function storeDifficulty(id, config) {
+  localStorage.setItem(
+    DIFFICULTY_STORAGE_KEY,
+    JSON.stringify({
+      id,
+      config: {
+        rows: config.rows,
+        cols: config.cols,
+        mines: config.mines,
+      },
+    }),
+  );
+}

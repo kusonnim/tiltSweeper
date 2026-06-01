@@ -1,3 +1,5 @@
+import { getCellDistanceDelay, playCellWave } from './effects.js';
+
 const MAX_VISIBLE_CELLS = 8;
 
 export function createBoardView(
@@ -39,7 +41,7 @@ export function createBoardView(
           Boolean(winOrigin),
         );
         if (winOrigin) {
-          cell.style.animationDelay = `${getWinPulseDelay(row, col, winOrigin)}ms`;
+          cell.style.animationDelay = `${getCellDistanceDelay(row, col, winOrigin, 55)}ms`;
         }
         cell.type = 'button';
         cell.dataset.row = String(row);
@@ -180,17 +182,11 @@ export function createBoardView(
   }
 
   function playWinPulse(origin) {
-    if (!origin) return;
-
-    for (const cell of grid.querySelectorAll('.cell')) {
-      const row = Number.parseInt(cell.dataset.row, 10);
-      const col = Number.parseInt(cell.dataset.col, 10);
-
-      cell.classList.remove('cell-win-pulse');
-      cell.style.animationDelay = `${getWinPulseDelay(row, col, origin)}ms`;
-      void cell.offsetWidth;
-      cell.classList.add('cell-win-pulse');
-    }
+    playCellWave(grid.querySelectorAll('.cell'), origin, {
+      className: 'cell-win-pulse',
+      clearClassNames: ['cell-lose-shock', 'cell-explosion'],
+      delayPerCell: 55,
+    });
   }
 
   function playLosePulse(origin) {
@@ -200,16 +196,12 @@ export function createBoardView(
     void element.offsetWidth;
     element.classList.add('board-shock');
 
-    for (const cell of grid.querySelectorAll('.cell')) {
-      const row = Number.parseInt(cell.dataset.row, 10);
-      const col = Number.parseInt(cell.dataset.col, 10);
-      const isOrigin = row === origin.row && col === origin.col;
-
-      cell.classList.remove('cell-lose-shock', 'cell-explosion');
-      cell.style.animationDelay = `${getLoseShockDelay(row, col, origin)}ms`;
-      void cell.offsetWidth;
-      cell.classList.add(isOrigin ? 'cell-explosion' : 'cell-lose-shock');
-    }
+    playCellWave(grid.querySelectorAll('.cell'), origin, {
+      className: 'cell-lose-shock',
+      clearClassNames: ['cell-win-pulse'],
+      delayPerCell: 38,
+      originClassName: 'cell-explosion',
+    });
   }
 
   function configureBoardSize() {
@@ -301,14 +293,4 @@ function getCellText(cell, debug) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
-}
-
-function getWinPulseDelay(row, col, origin) {
-  const distance = Math.hypot(row - origin.row, col - origin.col);
-  return Math.round(distance * 55);
-}
-
-function getLoseShockDelay(row, col, origin) {
-  const distance = Math.hypot(row - origin.row, col - origin.col);
-  return Math.round(distance * 38);
 }
