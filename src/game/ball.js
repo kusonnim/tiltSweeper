@@ -199,6 +199,7 @@ export function createBallController({
 
   function hideLives() {
     ball.style.setProperty('--life-progress', '0deg');
+    ball.style.setProperty('--life-color', 'var(--cyan)');
     ball.classList.remove('ball-life-critical');
     ball.classList.add('ball-life-hidden');
   }

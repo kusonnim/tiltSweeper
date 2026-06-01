@@ -34,7 +34,7 @@ export function createBoardView(
       for (let col = 0; col < game.cols; col += 1) {
         const cell = document.createElement('button');
         const boardCell = game.board[row][col];
-        const activeCell = getActiveCell();
+        const activeCell = debug ? getActiveCell() : null;
         cell.className = getCellClassName(
           boardCell,
           debug,
