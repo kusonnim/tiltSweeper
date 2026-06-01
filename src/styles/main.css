@@ -467,8 +467,8 @@ body[data-debug="1"] #app {
 
 .board {
   position: relative;
-  --cell-size: min(calc((100vw - 32px) / 8), 65px);
   --cell-gap: 3px;
+  --cell-size: min(calc((100vw - 32px - (var(--cell-gap) * (var(--visible-cols) - 1))) / var(--visible-cols)), 65px);
   width: calc((var(--cell-size) * var(--visible-cols)) + (var(--cell-gap) * (var(--visible-cols) - 1)));
   max-width: 100%;
   height: calc((var(--cell-size) * var(--visible-rows)) + (var(--cell-gap) * (var(--visible-rows) - 1)));
