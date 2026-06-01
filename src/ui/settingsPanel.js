@@ -4,6 +4,7 @@ export function createSettingsPanel({
   getConfig,
   getDifficultyId,
   getHapticsEnabled,
+  getHapticsIntensity,
   getHapticsSupported,
   getInputSettings,
   getModeSettings,
@@ -11,6 +12,7 @@ export function createSettingsPanel({
   onClose = () => {},
   onCustom = () => {},
   onHapticsToggle = () => {},
+  onHapticsIntensityChange = () => {},
   onInputSettingsChange = () => {},
   onModeSettingsChange = () => {},
   onPreset = () => {},
@@ -39,8 +41,10 @@ export function createSettingsPanel({
     const activeDifficultyId = getDifficultyId();
     const inputSettings = getInputSettings();
     const hapticsSupported = getHapticsSupported();
+    const hapticsIntensity = getHapticsIntensity();
     const modeSettings = getModeSettings();
     const activeThemeId = getThemeId();
+    const isCustomDifficulty = activeDifficultyId === 'custom';
 
     element.className = isOpen ? 'settings-panel' : 'settings-panel settings-panel-hidden';
     element.setAttribute('aria-hidden', String(!isOpen));
@@ -76,6 +80,11 @@ export function createSettingsPanel({
             <button class="${modeSettings.hazardHitMode === 'penalty' ? 'settings-chip settings-chip-active' : 'settings-chip'}" data-hit-mode="penalty" type="button">Penalty</button>
             <button class="${modeSettings.hazardHitMode === 'instant' ? 'settings-chip settings-chip-active' : 'settings-chip'}" data-hit-mode="instant" type="button">Instant death</button>
           </div>
+          ${
+            isCustomDifficulty
+              ? `<label class="settings-range">Patterns <input name="customHazardCount" type="range" min="1" max="10" step="1" value="${modeSettings.customHazardCount}" /><span>${modeSettings.customHazardCount}</span></label>`
+              : `<span class="settings-note">Patterns ${getPresetHazardCount(activeDifficultyId)}</span>`
+          }
         </section>
         <section class="settings-group">
           <strong>Theme</strong>
@@ -90,6 +99,7 @@ export function createSettingsPanel({
         <section class="settings-group">
           <strong>Feedback</strong>
           <label class="settings-toggle"><input name="haptics" type="checkbox" ${getHapticsEnabled() ? 'checked' : ''} ${hapticsSupported ? '' : 'disabled'} /> Haptics</label>
+          <label class="settings-range">Strength <input name="hapticIntensity" type="range" min="0.4" max="2.2" step="0.1" value="${hapticsIntensity}" ${hapticsSupported ? '' : 'disabled'} /><span>${hapticsIntensity.toFixed(1)}x</span></label>
           <span class="${hapticsSupported ? 'settings-note' : 'settings-note settings-note-warning'}">${hapticsSupported ? 'Vibration API supported' : 'Vibration API not supported'}</span>
         </section>
       </div>
@@ -146,6 +156,7 @@ export function createSettingsPanel({
     const sensitivity = element.querySelector('[name="tiltSensitivity"]');
     const deadZone = element.querySelector('[name="tiltDeadZone"]');
     const haptics = element.querySelector('[name="haptics"]');
+    const hapticIntensity = element.querySelector('[name="hapticIntensity"]');
 
     sensitivity?.addEventListener('input', () => {
       onInputSettingsChange({ tiltSensitivity: sensitivity.value, tiltDeadZone: deadZone?.value });
@@ -156,6 +167,10 @@ export function createSettingsPanel({
       deadZone.nextElementSibling.textContent = Number(deadZone.value).toFixed(2);
     });
     haptics?.addEventListener('change', () => onHapticsToggle(haptics.checked));
+    hapticIntensity?.addEventListener('input', () => {
+      onHapticsIntensityChange(hapticIntensity.value);
+      hapticIntensity.nextElementSibling.textContent = `${Number(hapticIntensity.value).toFixed(1)}x`;
+    });
     element.querySelector('[data-action="recalibrate"]')?.addEventListener('click', onRecalibrate);
   }
 
@@ -167,6 +182,12 @@ export function createSettingsPanel({
     for (const button of element.querySelectorAll('[data-hit-mode]')) {
       button.addEventListener('click', () => onModeSettingsChange({ hazardHitMode: button.dataset.hitMode }));
     }
+
+    const customHazards = element.querySelector('[name="customHazardCount"]');
+    customHazards?.addEventListener('input', () => {
+      onModeSettingsChange({ customHazardCount: customHazards.value });
+      customHazards.nextElementSibling.textContent = customHazards.value;
+    });
   }
 
   function handleBackdropPointerDown(event) {
@@ -181,4 +202,14 @@ export function createSettingsPanel({
     open,
     render,
   };
+}
+
+function getPresetHazardCount(difficultyId) {
+  const counts = {
+    easy: 1,
+    normal: 4,
+    hard: 7,
+  };
+
+  return counts[difficultyId] ?? 4;
 }

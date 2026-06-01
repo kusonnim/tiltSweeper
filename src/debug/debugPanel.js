@@ -4,7 +4,9 @@ export function createDebugPanel({
   haptics = null,
   input,
   hazards = null,
+  onCircleHazardTest = () => {},
   onHazardTest = () => {},
+  onLineHazardTest = () => {},
   onWinPulseTest = () => {},
   onLosePulseTest = () => {},
 }) {
@@ -45,10 +47,22 @@ export function createDebugPanel({
     const hazardButton = document.createElement('button');
     hazardButton.className = 'debug-action debug-action-danger';
     hazardButton.type = 'button';
-    hazardButton.textContent = 'Trigger hazard';
+    hazardButton.textContent = 'Trigger random';
     addDebugAction(hazardButton, onHazardTest);
 
-    actions.append(winButton, loseButton, hazardButton);
+    const lineHazardButton = document.createElement('button');
+    lineHazardButton.className = 'debug-action debug-action-danger';
+    lineHazardButton.type = 'button';
+    lineHazardButton.textContent = 'Trigger line';
+    addDebugAction(lineHazardButton, onLineHazardTest);
+
+    const circleHazardButton = document.createElement('button');
+    circleHazardButton.className = 'debug-action debug-action-danger';
+    circleHazardButton.type = 'button';
+    circleHazardButton.textContent = 'Trigger circle';
+    addDebugAction(circleHazardButton, onCircleHazardTest);
+
+    actions.append(winButton, loseButton, hazardButton, lineHazardButton, circleHazardButton);
     element.append(actions);
     update();
   }
@@ -137,8 +151,12 @@ function formatPercent(value) {
 
 function formatHazard(state) {
   if (!state) return '-';
-  if (!state.hazard) return `${state.mode} / ${state.hitMode} / idle`;
-  return `${state.mode} / ${state.hitMode} / ${state.hazard.axis} ${state.hazard.index} ${formatDirection(state.hazard)} ${state.hazard.phase}`;
+  if (!state.hazards?.length) return `${state.mode} / ${state.hitMode} / ${state.maxHazards}x / idle`;
+
+  const hazards = state.hazards
+    .map((hazard) => `${formatHazardShape(hazard)} ${hazard.phase}`)
+    .join(' | ');
+  return `${state.mode} / ${state.hitMode} / ${state.maxHazards}x / ${hazards}`;
 }
 
 function formatHaptics(haptics) {
@@ -152,4 +170,12 @@ function formatDirection(hazard) {
   }
 
   return hazard.direction === 1 ? 'down' : 'up';
+}
+
+function formatHazardShape(hazard) {
+  if (hazard.type === 'circle') {
+    return `circle ${hazard.row},${hazard.col} r${hazard.radius}`;
+  }
+
+  return `${hazard.axis} ${hazard.index} ${formatDirection(hazard)}`;
 }

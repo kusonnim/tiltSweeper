@@ -45,6 +45,8 @@ const board = createBoardView(game, {
 const input = createInputController();
 const haptics = createHapticsController();
 const hazards = createDynamicHazards({
+  getCircleRadius: getDynamicCircleRadius,
+  getMaxHazards: getDynamicHazardCount,
   getRows: () => game.rows,
   getCols: () => game.cols,
   getSettings: () => modeSettings,
@@ -59,12 +61,14 @@ const settingsPanel = createSettingsPanel({
   getConfig: () => ({ rows: game.rows, cols: game.cols, mines: game.mines }),
   getDifficultyId: () => difficultyId,
   getHapticsEnabled: () => haptics.isEnabled(),
+  getHapticsIntensity: () => haptics.getIntensity(),
   getHapticsSupported: () => haptics.isSupported(),
   getInputSettings: () => input.getSettings(),
   getModeSettings: () => ({ ...modeSettings }),
   getThemeId: () => theme.getTheme(),
   onPreset: applyPresetDifficulty,
   onCustom: applyCustomDifficulty,
+  onHapticsIntensityChange: updateHapticsIntensity,
   onHapticsToggle: setHapticsEnabled,
   onInputSettingsChange: updateInputSettings,
   onModeSettingsChange: updateModeSettings,
@@ -87,7 +91,9 @@ debugPanel = debug
       input,
       hazards,
       haptics,
+      onCircleHazardTest: triggerDebugCircleHazard,
       onHazardTest: triggerDebugHazard,
+      onLineHazardTest: triggerDebugLineHazard,
       onWinPulseTest: playDebugWinPulse,
       onLosePulseTest: playDebugLosePulse,
     })
@@ -194,6 +200,10 @@ function updateModeSettings(settings) {
     modeSettings.hazardHitMode = settings.hazardHitMode;
   }
 
+  if (settings.customHazardCount !== undefined) {
+    modeSettings.customHazardCount = clampInteger(settings.customHazardCount, 1, 10, modeSettings.customHazardCount);
+  }
+
   localStorage.setItem(MODE_STORAGE_KEY, JSON.stringify(modeSettings));
   resetHazards();
   board.updateHazardCells();
@@ -211,6 +221,11 @@ function setHapticsEnabled(isEnabled) {
   if (isEnabled) {
     haptics.trigger('flag');
   }
+}
+
+function updateHapticsIntensity(intensity) {
+  haptics.setIntensity(intensity);
+  haptics.trigger('flag');
 }
 
 function playDebugWinPulse(cell) {
@@ -250,13 +265,29 @@ function handleHazardHit(cell) {
 }
 
 function triggerDebugHazard() {
+  prepareDebugHazard();
+  hazards.triggerRandomGroup();
+  board.updateHazardCells();
+}
+
+function triggerDebugLineHazard() {
+  prepareDebugHazard();
+  hazards.triggerLineGroup();
+  board.updateHazardCells();
+}
+
+function triggerDebugCircleHazard() {
+  prepareDebugHazard();
+  hazards.triggerCircleGroup();
+  board.updateHazardCells();
+}
+
+function prepareDebugHazard() {
   if (modeSettings.mode !== 'dynamic') {
     updateModeSettings({ mode: 'dynamic' });
   }
 
-  hazards.triggerRandom();
   lastHazardHapticKey = '';
-  board.updateHazardCells();
 }
 
 function resetHazards() {
@@ -265,10 +296,10 @@ function resetHazards() {
 }
 
 function triggerHazardHaptics() {
-  const hazardState = hazards.getDebugState().hazard;
-  if (!hazardState || hazardState.phase !== 'active') return;
+  const activeHazards = hazards.getDebugState().hazards.filter((hazard) => hazard.phase === 'active');
+  if (activeHazards.length === 0) return;
 
-  const hapticKey = `${hazardState.startedAt}:active`;
+  const hapticKey = activeHazards.map((hazard) => `${hazard.startedAt}:active`).join('|');
   if (hapticKey === lastHazardHapticKey) return;
 
   lastHazardHapticKey = hapticKey;
@@ -332,11 +363,43 @@ function storeDifficulty(id, config) {
 
 function getStoredModeSettings() {
   try {
-    return {
+    const storedSettings = {
       ...DYNAMIC_MODE_SETTINGS,
       ...JSON.parse(localStorage.getItem(MODE_STORAGE_KEY)),
     };
+    storedSettings.customHazardCount = clampInteger(storedSettings.customHazardCount, 1, 10, DYNAMIC_MODE_SETTINGS.customHazardCount);
+    return storedSettings;
   } catch {
     return { ...DYNAMIC_MODE_SETTINGS };
   }
+}
+
+function getDynamicHazardCount() {
+  const counts = {
+    easy: 1,
+    normal: 4,
+    hard: 7,
+  };
+
+  return difficultyId === 'custom' ? modeSettings.customHazardCount : counts[difficultyId] ?? 4;
+}
+
+function getDynamicCircleRadius() {
+  const radii = {
+    easy: 1,
+    normal: 2,
+    hard: 3,
+  };
+
+  if (difficultyId === 'custom') {
+    return Math.max(1, Math.min(4, Math.ceil(modeSettings.customHazardCount / 3)));
+  }
+
+  return radii[difficultyId] ?? 2;
+}
+
+function clampInteger(value, min, max, fallback) {
+  const number = Number.parseInt(value, 10);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
 }
