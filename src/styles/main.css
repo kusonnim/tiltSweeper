@@ -609,9 +609,48 @@ body[data-theme="garden"] .board-lost {
 
 .cell-hazard-warning {
   z-index: 4;
-  outline: 2px solid color-mix(in srgb, var(--red) 86%, transparent);
-  outline-offset: -4px;
+  outline: 4px solid color-mix(in srgb, var(--red) 90%, transparent);
+  outline-offset: -5px;
   animation: hazard-warning 540ms ease-out both;
+}
+
+.cell-hazard-blocker-warning {
+  z-index: 4;
+  border-color: color-mix(in srgb, var(--amber) 88%, transparent);
+  outline: 3px dashed color-mix(in srgb, var(--amber) 82%, transparent);
+  outline-offset: -6px;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--amber) 42%, transparent),
+    0 0 12px color-mix(in srgb, var(--amber) 18%, transparent);
+  animation: shelter-warning 620ms ease-in-out infinite alternate;
+}
+
+.cell-hazard-blocker {
+  z-index: 6;
+  border-color: color-mix(in srgb, var(--amber) 96%, transparent);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 10%) 0 12%, transparent 12% 24%, rgb(0 0 0 / 18%) 24% 38%, transparent 38%),
+    color-mix(in srgb, var(--panel) 72%, var(--amber));
+  color: #fff2bf;
+  box-shadow:
+    inset 0 0 0 3px color-mix(in srgb, var(--amber) 74%, transparent),
+    inset 0 -8px 0 rgb(0 0 0 / 18%),
+    0 7px 12px rgb(0 0 0 / 30%);
+}
+
+.cell-hazard-shelter-shadow {
+  z-index: 2;
+  border-color: color-mix(in srgb, #70ffba 92%, transparent);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, #70ffba 24%, transparent) 0 6px,
+      transparent 6px 12px
+    ),
+    var(--cell);
+  box-shadow:
+    inset 0 0 0 3px color-mix(in srgb, #70ffba 62%, transparent),
+    0 0 14px color-mix(in srgb, #70ffba 24%, transparent);
 }
 
 body .cell.cell-hazard-active {
@@ -637,16 +676,26 @@ body .cell.cell-hazard-active.cell-hazard-active-pop {
   0%,
   100% {
     border-color: color-mix(in srgb, var(--red) 74%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 40%, transparent);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--red) 52%, transparent);
     transform: scale(1);
   }
 
   38% {
     border-color: color-mix(in srgb, var(--red) 92%, transparent);
     box-shadow:
-      inset 0 0 0 2px color-mix(in srgb, var(--red) 56%, transparent),
-      0 0 12px color-mix(in srgb, var(--red) 22%, transparent);
+      inset 0 0 0 4px color-mix(in srgb, var(--red) 70%, transparent),
+      0 0 12px color-mix(in srgb, var(--red) 24%, transparent);
     transform: scale(1.14);
+  }
+}
+
+@keyframes shelter-warning {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.08);
   }
 }
 
@@ -669,9 +718,30 @@ body .cell.cell-hazard-active.cell-hazard-active-pop {
 }
 
 body[data-theme="garden"] .cell-hazard-pending,
-body[data-theme="garden"] .cell-hazard-warning {
+body[data-theme="garden"] .cell-hazard-warning,
+body[data-theme="garden"] .cell-hazard-blocker-warning {
   border-color: #b23b34;
-  box-shadow: none;
+}
+
+body[data-theme="garden"] .cell-hazard-blocker {
+  border-color: #d9b15f;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 12%) 0 12%, transparent 12% 24%, rgb(0 0 0 / 18%) 24% 38%, transparent 38%),
+    #8b6a3f;
+  box-shadow:
+    inset 0 0 0 3px #d9b15f,
+    inset 0 -8px 0 rgb(0 0 0 / 18%),
+    0 7px 12px rgb(0 0 0 / 30%);
+}
+
+body[data-theme="garden"] .cell-hazard-shelter-shadow {
+  border-color: #d9e7bc;
+  background:
+    repeating-linear-gradient(135deg, rgb(217 231 188 / 28%) 0 6px, transparent 6px 12px),
+    var(--cell);
+  box-shadow:
+    inset 0 0 0 3px rgb(217 231 188 / 68%),
+    0 0 12px rgb(217 231 188 / 22%);
 }
 
 body[data-theme="garden"] .cell.cell-hazard-active {

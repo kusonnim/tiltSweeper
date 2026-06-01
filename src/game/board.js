@@ -56,6 +56,7 @@ export function createBoardView(
           }
 
           if (debug && !event.shiftKey) {
+            if (isCellRevealBlocked(row, col)) return;
             onCellReveal({ row, col });
             return;
           }
@@ -165,11 +166,15 @@ export function createBoardView(
 
   function isCellRevealable(row, col) {
     const cell = game.board[row]?.[col];
-    if (!cell || cell.isFlagged || game.status === 'lost' || game.status === 'won') {
+    if (!cell || cell.isFlagged || isCellRevealBlocked(row, col) || game.status === 'lost' || game.status === 'won') {
       return false;
     }
 
     return !cell.isRevealed || game.canRevealFromNumber(row, col);
+  }
+
+  function isCellRevealBlocked(row, col) {
+    return getHazardState(row, col) === 'shelter-shadow';
   }
 
   function updateActiveCell(activeCell) {
@@ -295,6 +300,18 @@ function getCellClassName(cell, debug, isActive, isLightSquare, isWinCelebrating
     classNames.push('cell-hazard-pending');
   }
 
+  if (hazardState === 'blocker-warning') {
+    classNames.push('cell-hazard-blocker-warning');
+  }
+
+  if (hazardState === 'blocker') {
+    classNames.push('cell-hazard-blocker');
+  }
+
+  if (hazardState === 'shelter-shadow') {
+    classNames.push('cell-hazard-shelter-shadow');
+  }
+
   if (hazardState === 'active' || hazardState === 'active-pop') {
     classNames.push('cell-hazard-active');
   }
@@ -309,6 +326,9 @@ function getCellClassName(cell, debug, isActive, isLightSquare, isWinCelebrating
 function applyHazardClass(cell, hazardState) {
   cell.classList.toggle('cell-hazard-pending', hazardState === 'warning-pending');
   cell.classList.toggle('cell-hazard-warning', hazardState === 'warning');
+  cell.classList.toggle('cell-hazard-blocker-warning', hazardState === 'blocker-warning');
+  cell.classList.toggle('cell-hazard-blocker', hazardState === 'blocker');
+  cell.classList.toggle('cell-hazard-shelter-shadow', hazardState === 'shelter-shadow');
   cell.classList.toggle('cell-hazard-active', hazardState === 'active' || hazardState === 'active-pop');
   cell.classList.toggle('cell-hazard-active-pop', hazardState === 'active-pop');
 }

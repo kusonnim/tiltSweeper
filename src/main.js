@@ -83,7 +83,13 @@ const uiState = {
 
 app.append(hud.element, board.element, screens.element, settingsPanel.element);
 
-ball = createBallController({ board, input, getHazardHit: isHazardHit, onHazardHit: handleHazardHit });
+ball = createBallController({
+  board,
+  input,
+  getHazardHit: isHazardHit,
+  isBlockedCell: isHazardBlocked,
+  onHazardHit: handleHazardHit,
+});
 debugPanel = debug
   ? createDebugPanel({
       game,
@@ -92,8 +98,10 @@ debugPanel = debug
       hazards,
       haptics,
       onCircleHazardTest: triggerDebugCircleHazard,
+      onEdgeHazardTest: triggerDebugEdgeHazard,
       onHazardTest: triggerDebugHazard,
       onLineHazardTest: triggerDebugLineHazard,
+      onShelterHazardTest: triggerDebugShelterHazard,
       onWinPulseTest: playDebugWinPulse,
       onLosePulseTest: playDebugLosePulse,
     })
@@ -250,6 +258,10 @@ function isHazardHit(cell) {
   return modeSettings.mode === 'dynamic' && hazards.isCellActive(cell) && game.status !== 'lost' && game.status !== 'won';
 }
 
+function isHazardBlocked(cell) {
+  return modeSettings.mode === 'dynamic' && hazards.isCellBlocked(cell) && game.status !== 'lost' && game.status !== 'won';
+}
+
 function handleHazardHit(cell) {
   if (modeSettings.hazardHitMode === 'instant') {
     game.failAt(cell);
@@ -279,6 +291,18 @@ function triggerDebugLineHazard() {
 function triggerDebugCircleHazard() {
   prepareDebugHazard();
   hazards.triggerCircleGroup();
+  board.updateHazardCells();
+}
+
+function triggerDebugEdgeHazard() {
+  prepareDebugHazard();
+  hazards.triggerEdgeWave();
+  board.updateHazardCells();
+}
+
+function triggerDebugShelterHazard() {
+  prepareDebugHazard();
+  hazards.triggerShelterSweep();
   board.updateHazardCells();
 }
 

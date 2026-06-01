@@ -5,8 +5,10 @@ export function createDebugPanel({
   input,
   hazards = null,
   onCircleHazardTest = () => {},
+  onEdgeHazardTest = () => {},
   onHazardTest = () => {},
   onLineHazardTest = () => {},
+  onShelterHazardTest = () => {},
   onWinPulseTest = () => {},
   onLosePulseTest = () => {},
 }) {
@@ -62,7 +64,19 @@ export function createDebugPanel({
     circleHazardButton.textContent = 'Trigger circle';
     addDebugAction(circleHazardButton, onCircleHazardTest);
 
-    actions.append(winButton, loseButton, hazardButton, lineHazardButton, circleHazardButton);
+    const edgeHazardButton = document.createElement('button');
+    edgeHazardButton.className = 'debug-action debug-action-danger';
+    edgeHazardButton.type = 'button';
+    edgeHazardButton.textContent = 'Trigger edge';
+    addDebugAction(edgeHazardButton, onEdgeHazardTest);
+
+    const shelterHazardButton = document.createElement('button');
+    shelterHazardButton.className = 'debug-action debug-action-danger';
+    shelterHazardButton.type = 'button';
+    shelterHazardButton.textContent = 'Trigger shelter';
+    addDebugAction(shelterHazardButton, onShelterHazardTest);
+
+    actions.append(winButton, loseButton, hazardButton, lineHazardButton, circleHazardButton, edgeHazardButton, shelterHazardButton);
     element.append(actions);
     update();
   }
@@ -175,6 +189,14 @@ function formatDirection(hazard) {
 function formatHazardShape(hazard) {
   if (hazard.type === 'circle') {
     return `circle ${hazard.row},${hazard.col} r${hazard.radius}`;
+  }
+
+  if (hazard.type === 'edge') {
+    return `edge ${hazard.side}`;
+  }
+
+  if (hazard.type === 'shelter') {
+    return `shelter ${hazard.side} ${hazard.boxes?.length ?? 0} boxes`;
   }
 
   return `${hazard.axis} ${hazard.index} ${formatDirection(hazard)}`;

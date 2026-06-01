@@ -4,7 +4,13 @@ const FRICTION = 0.94;
 const MAX_SPEED = 4.2;
 const DWELL_DURATION_MS = 650;
 
-export function createBallController({ board, input, getHazardHit = () => false, onHazardHit = () => {} }) {
+export function createBallController({
+  board,
+  input,
+  getHazardHit = () => false,
+  isBlockedCell = () => false,
+  onHazardHit = () => {},
+}) {
   const position = { x: 0, y: 0 };
   const velocity = { x: 0, y: 0 };
   let activeCellKey = '';
@@ -36,8 +42,10 @@ export function createBallController({ board, input, getHazardHit = () => false,
   function tick() {
     if (isPlaced) {
       applyInput();
+      const previousPosition = { x: position.x, y: position.y };
       move();
       keepInsideBoard();
+      keepOutsideBlockedCells(previousPosition);
       updateBallPosition(position.x, position.y);
     }
 
@@ -87,6 +95,17 @@ export function createBallController({ board, input, getHazardHit = () => false,
       position.y = bounds.height - BALL_RADIUS;
       velocity.y = 0;
     }
+  }
+
+  function keepOutsideBlockedCells(previousPosition) {
+    const cell = board.cellFromPoint(position.x, position.y);
+    if (!cell || !isBlockedCell(cell)) return;
+
+    position.x = previousPosition.x;
+    position.y = previousPosition.y;
+    velocity.x = 0;
+    velocity.y = 0;
+    resetDwell();
   }
 
   function limitSpeed() {
