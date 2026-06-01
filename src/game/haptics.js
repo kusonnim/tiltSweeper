@@ -2,6 +2,7 @@ const STORAGE_KEY = 'minesweeper-tilt-haptics';
 
 const PATTERNS = {
   flag: 18,
+  hazard: [28, 22, 28],
   reveal: 12,
   win: [24, 36, 48],
   lose: [70, 30, 90],

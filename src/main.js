@@ -30,6 +30,7 @@ let ball;
 let isBallPlaced = false;
 let debugPanel;
 let difficultyId = storedDifficulty.id;
+let lastHazardHapticKey = '';
 game.reset(storedDifficulty.config);
 
 const board = createBoardView(game, {
@@ -122,7 +123,7 @@ function revealCell(cell) {
 
 function placeBall(cell) {
   isBallPlaced = true;
-  hazards.reset();
+  resetHazards();
   ball.placeAtCell(cell);
   revealCell(cell);
 }
@@ -135,7 +136,7 @@ function toggleFlag(cell) {
 
 function restartGame() {
   game.reset();
-  hazards.reset();
+  resetHazards();
   board.resetCamera();
   isBallPlaced = false;
   ball.reset();
@@ -154,7 +155,7 @@ function applyCustomDifficulty(config) {
 
 function resetWithConfig(config) {
   game.reset(config);
-  hazards.reset();
+  resetHazards();
   storeDifficulty(difficultyId, { rows: game.rows, cols: game.cols, mines: game.mines });
   board.resetCamera();
   isBallPlaced = false;
@@ -192,7 +193,7 @@ function updateModeSettings(settings) {
   }
 
   localStorage.setItem(MODE_STORAGE_KEY, JSON.stringify(modeSettings));
-  hazards.reset();
+  resetHazards();
   board.updateHazardCells();
   settingsPanel.render();
 }
@@ -235,7 +236,7 @@ function isHazardHit(cell) {
 function handleHazardHit(cell) {
   if (modeSettings.hazardHitMode === 'instant') {
     game.failAt(cell);
-    hazards.reset();
+    resetHazards();
     renderGame();
     playLoseEffect(cell);
     return;
@@ -252,7 +253,24 @@ function triggerDebugHazard() {
   }
 
   hazards.triggerRandom();
+  lastHazardHapticKey = '';
   board.updateHazardCells();
+}
+
+function resetHazards() {
+  hazards.reset();
+  lastHazardHapticKey = '';
+}
+
+function triggerHazardHaptics() {
+  const hazardState = hazards.getDebugState().hazard;
+  if (!hazardState || hazardState.phase !== 'active') return;
+
+  const hapticKey = `${hazardState.startedAt}:active`;
+  if (hapticKey === lastHazardHapticKey) return;
+
+  lastHazardHapticKey = hapticKey;
+  haptics.trigger('hazard');
 }
 
 renderGame();
@@ -266,6 +284,7 @@ setInterval(() => {
   if (modeSettings.mode !== 'dynamic' || !isBallPlaced || game.status === 'lost' || game.status === 'won') return;
 
   hazards.update();
+  triggerHazardHaptics();
   board.updateHazardCells();
 }, 80);
 ball.start();
