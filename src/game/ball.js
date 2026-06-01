@@ -189,7 +189,7 @@ export function createBallController({
     const max = Math.max(1, Number(maxLives) || 1);
     const current = Math.max(0, Math.min(max, Number(currentLives) || 0));
     const ratio = current / max;
-    const color = ratio > 0.55 ? '#70ffba' : ratio > 0.25 ? 'var(--amber)' : '#ff9f43';
+    const color = ratio > 0.55 ? '#70ffba' : ratio > 0.25 ? 'var(--amber)' : 'var(--red)';
 
     ball.style.setProperty('--life-progress', `${Math.round(ratio * 360)}deg`);
     ball.style.setProperty('--life-color', color);
