@@ -640,27 +640,32 @@ function createShelterBoxes(side, rowCount, colCount) {
   const rows = getSafeDimension(rowCount);
   const cols = getSafeDimension(colCount);
   const targetCount = getBoxCount(rows, cols);
-  const rowRange = normalizeRange(
+  const rowPlacementRange = getBoxPlacementRange(rows);
+  const colPlacementRange = getBoxPlacementRange(cols);
+  const rawRowRange = normalizeRange(
     side === 'bottom' ? Math.min(rows - 1, SHELTER_SHADOW_LENGTH) : 1,
     side === 'top' ? Math.max(0, rows - SHELTER_SHADOW_LENGTH - 1) : rows - 2,
     rows,
   );
-  const colRange = normalizeRange(
+  const rawColRange = normalizeRange(
     side === 'right' ? Math.min(cols - 1, SHELTER_SHADOW_LENGTH) : 1,
     side === 'left' ? Math.max(0, cols - SHELTER_SHADOW_LENGTH - 1) : cols - 2,
     cols,
   );
+  const rowRange = clampRangeToPlacement(rawRowRange, rowPlacementRange);
+  const colRange = clampRangeToPlacement(rawColRange, colPlacementRange);
+  const maxBoxes = Math.min(targetCount, getRangeLength(rowRange) * getRangeLength(colRange));
   const spreadAxis = ['top', 'bottom'].includes(side) ? 'col' : 'row';
   const spreadRange = spreadAxis === 'col' ? colRange : rowRange;
   const depthRange = spreadAxis === 'col' ? rowRange : colRange;
-  const segments = createSegments(spreadRange.min, spreadRange.max, targetCount);
+  const segments = createSegments(spreadRange.min, spreadRange.max, maxBoxes);
   const boxes = segments.map((segment) => {
     const spreadValue = randomInteger(segment.min, segment.max);
     const depthValue = randomInteger(depthRange.min, depthRange.max);
     return spreadAxis === 'col' ? { row: depthValue, col: spreadValue } : { row: spreadValue, col: depthValue };
   });
 
-  while (boxes.length < targetCount && boxes.length < rows * cols) {
+  while (boxes.length < maxBoxes) {
     const row = randomInteger(rowRange.min, rowRange.max);
     const col = randomInteger(colRange.min, colRange.max);
     if (!hasCell(boxes, row, col)) {
@@ -675,12 +680,13 @@ function createDistributedBoxes(rowCount, colCount, targetCount) {
   const rows = getSafeDimension(rowCount);
   const cols = getSafeDimension(colCount);
   const boxes = [];
-  const rowRange = normalizeRange(0, rows - 1, rows);
-  const colRange = normalizeRange(0, cols - 1, cols);
+  const rowRange = getBoxPlacementRange(rows);
+  const colRange = getBoxPlacementRange(cols);
+  const maxBoxes = Math.min(targetCount, getRangeLength(rowRange) * getRangeLength(colRange));
   const spreadAxis = cols >= rows ? 'col' : 'row';
   const spreadRange = spreadAxis === 'col' ? colRange : rowRange;
   const depthRange = spreadAxis === 'col' ? rowRange : colRange;
-  const segments = createSegments(spreadRange.min, spreadRange.max, targetCount);
+  const segments = createSegments(spreadRange.min, spreadRange.max, maxBoxes);
 
   for (const [order, segment] of segments.entries()) {
     const spreadValue = randomInteger(segment.min, segment.max);
@@ -691,7 +697,7 @@ function createDistributedBoxes(rowCount, colCount, targetCount) {
     }
   }
 
-  while (boxes.length < targetCount && boxes.length < rows * cols) {
+  while (boxes.length < maxBoxes) {
     const box = {
       row: randomInteger(rowRange.min, rowRange.max),
       col: randomInteger(colRange.min, colRange.max),
@@ -736,6 +742,29 @@ function isCellOnLaser(row, col, laser) {
 
 function getBoxCount(rows, cols) {
   return Math.max(1, Math.floor((rows * cols) / 36));
+}
+
+function getBoxPlacementRange(length) {
+  if (length <= 2) {
+    return normalizeRange(0, length - 1, length);
+  }
+
+  return normalizeRange(1, length - 2, length);
+}
+
+function clampRangeToPlacement(range, placementRange) {
+  const min = Math.max(range.min, placementRange.min);
+  const max = Math.min(range.max, placementRange.max);
+
+  if (min > max) {
+    return placementRange;
+  }
+
+  return { min, max };
+}
+
+function getRangeLength(range) {
+  return Math.max(0, range.max - range.min + 1);
 }
 
 function createSegments(min, max, count) {
