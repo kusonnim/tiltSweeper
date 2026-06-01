@@ -105,7 +105,10 @@ export function createBallController({
     const cell = board.cellFromPoint(position.x, position.y);
     if (!cell || !isBlockedCell(cell)) return;
 
-    checkHazardHit(cell);
+    const previousCell = board.cellFromPoint(previousPosition.x, previousPosition.y);
+    if (previousCell?.row === cell.row && previousCell?.col === cell.col) {
+      checkHazardHit(cell);
+    }
     position.x = previousPosition.x;
     position.y = previousPosition.y;
     velocity.x = 0;
