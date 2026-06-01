@@ -38,6 +38,7 @@ body[data-theme="chess"] {
 }
 
 body {
+  width: 100%;
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
@@ -55,10 +56,12 @@ body[data-theme="chess"] {
 
 #app {
   display: grid;
+  width: 100%;
   min-height: 100vh;
   place-items: center;
+  overflow: hidden;
   gap: 16px;
-  padding: 24px;
+  padding: 24px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
 }
 
 .hud {
@@ -66,14 +69,18 @@ body[data-theme="chess"] {
   width: min(92vw, 520px);
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   color: var(--cyan-soft);
   font-size: 14px;
 }
 
 .hud-hint {
+  flex: 1 1 auto;
+  min-width: 72px;
   color: var(--muted);
   font-size: 12px;
+  text-align: center;
 }
 
 .tilt-button {
@@ -106,6 +113,7 @@ body[data-theme="chess"] {
   position: relative;
   display: grid;
   width: min(92vw, 520px);
+  max-width: 100%;
   aspect-ratio: 1;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
@@ -246,6 +254,7 @@ body[data-theme="chess"] .cell-revealed {
 .screens {
   display: flex;
   width: min(92vw, 520px);
+  max-width: 100%;
   min-height: 54px;
   align-items: center;
   justify-content: space-between;
@@ -297,6 +306,7 @@ body[data-theme="chess"] .cell-revealed {
 .debug-panel {
   display: grid;
   width: min(92vw, 520px);
+  max-width: 100%;
   gap: 6px;
   border: 1px solid color-mix(in srgb, var(--cyan) 28%, transparent);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
