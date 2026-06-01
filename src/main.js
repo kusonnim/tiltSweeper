@@ -4,6 +4,7 @@ import { createBoardView } from './game/board.js';
 import { createBallController } from './game/ball.js';
 import { createInputController } from './game/input.js';
 import { createHud } from './ui/hud.js';
+import { createDifficultyPanel } from './ui/difficultyPanel.js';
 import { createScreens } from './ui/screens.js';
 import { createThemeController } from './ui/theme.js';
 import { isDebugMode } from './debug/debug.js';
@@ -18,6 +19,7 @@ const game = createMinesweeperGame();
 let ball;
 let isBallPlaced = false;
 let debugPanel;
+let difficultyId = 'normal';
 
 const board = createBoardView(game, {
   debug,
@@ -35,12 +37,18 @@ const hud = createHud(game, {
   onTiltRequest: enableTilt,
 });
 const screens = createScreens(game, { onRestart: restartGame });
+const difficultyPanel = createDifficultyPanel({
+  getConfig: () => ({ rows: game.rows, cols: game.cols, mines: game.mines }),
+  getDifficultyId: () => difficultyId,
+  onPreset: applyPresetDifficulty,
+  onCustom: applyCustomDifficulty,
+});
 const uiState = {
   isBallPlaced: () => isBallPlaced,
   isDebug: debug,
 };
 
-app.append(hud.element, board.element, screens.element);
+app.append(hud.element, difficultyPanel.element, board.element, screens.element);
 
 ball = createBallController({ board, input });
 debugPanel = debug ? createDebugPanel({ game, ball, input }) : null;
@@ -57,6 +65,7 @@ function renderGame() {
     board.element.append(ball.element);
   }
   hud.render();
+  difficultyPanel.render();
   screens.render(uiState);
   debugPanel?.render();
 }
@@ -80,6 +89,25 @@ function toggleFlag(cell) {
 
 function restartGame() {
   game.reset();
+  board.resetCamera();
+  isBallPlaced = false;
+  ball.reset();
+  renderGame();
+}
+
+function applyPresetDifficulty(difficulty) {
+  difficultyId = difficulty.id;
+  resetWithConfig(difficulty.config);
+}
+
+function applyCustomDifficulty(config) {
+  difficultyId = 'custom';
+  resetWithConfig(config);
+}
+
+function resetWithConfig(config) {
+  game.reset(config);
+  board.resetCamera();
   isBallPlaced = false;
   ball.reset();
   renderGame();

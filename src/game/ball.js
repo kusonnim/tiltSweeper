@@ -90,7 +90,9 @@ export function createBallController({ board, input }) {
   }
 
   function updateBallPosition(x, y) {
-    ball.style.transform = `translate(${x}px, ${y}px)`;
+    board.updateCamera({ x, y });
+    const viewportPosition = board.worldToViewport(x, y);
+    ball.style.transform = `translate(${viewportPosition.x}px, ${viewportPosition.y}px)`;
 
     const cell = board.cellFromPoint(x, y);
     if (!cell) {

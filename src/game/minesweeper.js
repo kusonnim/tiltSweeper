@@ -1,6 +1,8 @@
-export const BOARD_ROWS = 8;
-export const BOARD_COLS = 8;
-export const MINE_COUNT = 10;
+export const DEFAULT_GAME_CONFIG = {
+  rows: 12,
+  cols: 12,
+  mines: 22,
+};
 
 const NEIGHBOR_OFFSETS = [
   [-1, -1],
@@ -13,22 +15,28 @@ const NEIGHBOR_OFFSETS = [
   [1, 1],
 ];
 
-export function createMinesweeperGame() {
+export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
+  const initialConfig = normalizeConfig(config);
   const game = {
-    rows: BOARD_ROWS,
-    cols: BOARD_COLS,
-    mines: MINE_COUNT,
-    board: createMinefield(),
+    rows: initialConfig.rows,
+    cols: initialConfig.cols,
+    mines: initialConfig.mines,
+    board: createMinefield(initialConfig),
     isInitialized: false,
     status: 'ready',
     revealCell(row, col) {
       if (game.status === 'lost' || game.status === 'won') return;
 
       const cell = getCell(game.board, row, col);
-      if (!cell || cell.isRevealed || cell.isFlagged) return;
+      if (!cell || cell.isFlagged) return;
+
+      if (cell.isRevealed) {
+        revealNeighborCellsFromNumber(game, cell);
+        return;
+      }
 
       if (!game.isInitialized) {
-        initializeMinefield(game.board, cell);
+        initializeMinefield(game.board, cell, game.mines);
         game.isInitialized = true;
       }
 
@@ -47,6 +55,12 @@ export function createMinesweeperGame() {
         game.status = 'playing';
       }
     },
+    canRevealFromNumber(row, col) {
+      if (game.status === 'lost' || game.status === 'won') return false;
+
+      const cell = getCell(game.board, row, col);
+      return Boolean(cell && canRevealNeighborCellsFromNumber(game.board, cell));
+    },
     toggleFlag(row, col) {
       if (game.status === 'lost' || game.status === 'won') return;
 
@@ -55,8 +69,12 @@ export function createMinesweeperGame() {
 
       cell.isFlagged = !cell.isFlagged;
     },
-    reset() {
-      game.board = createMinefield();
+    reset(nextConfig) {
+      const config = normalizeConfig(nextConfig ?? game);
+      game.rows = config.rows;
+      game.cols = config.cols;
+      game.mines = config.mines;
+      game.board = createMinefield(config);
       game.isInitialized = false;
       game.status = 'ready';
     },
@@ -77,13 +95,14 @@ export function createMinesweeperGame() {
   return game;
 }
 
-export function createMinefield() {
-  return createEmptyBoard();
+export function createMinefield(config = DEFAULT_GAME_CONFIG) {
+  const { rows, cols } = normalizeConfig(config);
+  return createEmptyBoard(rows, cols);
 }
 
-function createEmptyBoard() {
-  return Array.from({ length: BOARD_ROWS }, (_, row) =>
-    Array.from({ length: BOARD_COLS }, (_, col) => ({
+function createEmptyBoard(rows, cols) {
+  return Array.from({ length: rows }, (_, row) =>
+    Array.from({ length: cols }, (_, col) => ({
       row,
       col,
       isMine: false,
@@ -94,26 +113,28 @@ function createEmptyBoard() {
   );
 }
 
-function initializeMinefield(board, firstCell) {
-  placeMines(board, firstCell);
+function initializeMinefield(board, firstCell, mineCount) {
+  placeMines(board, firstCell, mineCount);
   fillAdjacentMineCounts(board);
 }
 
-function placeMines(board, firstCell) {
+function placeMines(board, firstCell, mineCount) {
+  const rows = board.length;
+  const cols = board[0].length;
   const safePositions = new Set([firstCell, ...getNeighbors(board, firstCell.row, firstCell.col)].map(cellToKey));
-  const positions = Array.from({ length: BOARD_ROWS * BOARD_COLS }, (_, index) => index).filter(
-    (position) => !safePositions.has(positionToKey(position)),
+  const positions = Array.from({ length: rows * cols }, (_, index) => index).filter(
+    (position) => !safePositions.has(positionToKey(position, cols)),
   );
 
-  if (positions.length < MINE_COUNT) {
+  if (positions.length < mineCount) {
     throw new Error('Not enough cells to place mines outside the first safe area.');
   }
 
   shuffle(positions);
 
-  for (const position of positions.slice(0, MINE_COUNT)) {
-    const row = Math.floor(position / BOARD_COLS);
-    const col = position % BOARD_COLS;
+  for (const position of positions.slice(0, mineCount)) {
+    const row = Math.floor(position / cols);
+    const col = position % cols;
     board[row][col].isMine = true;
   }
 }
@@ -162,6 +183,37 @@ function revealSafeCells(board, startCell) {
   }
 }
 
+function revealNeighborCellsFromNumber(game, cell) {
+  if (!canRevealNeighborCellsFromNumber(game.board, cell)) return;
+
+  for (const neighbor of getNeighbors(game.board, cell.row, cell.col)) {
+    if (neighbor.isRevealed || neighbor.isFlagged) continue;
+
+    if (neighbor.isMine) {
+      neighbor.isRevealed = true;
+      revealAllMines(game.board);
+      game.status = 'lost';
+      return;
+    }
+
+    revealSafeCells(game.board, neighbor);
+  }
+
+  if (areAllSafeCellsRevealed(game.board)) {
+    game.status = 'won';
+  }
+}
+
+function canRevealNeighborCellsFromNumber(board, cell) {
+  if (!cell.isRevealed || cell.isMine || cell.adjacentMines === 0) return false;
+
+  const neighbors = getNeighbors(board, cell.row, cell.col);
+  const flagCount = neighbors.filter((neighbor) => neighbor.isFlagged).length;
+  const hiddenNeighborCount = neighbors.filter((neighbor) => !neighbor.isRevealed && !neighbor.isFlagged).length;
+
+  return flagCount === cell.adjacentMines && hiddenNeighborCount > 0;
+}
+
 function revealAllMines(board) {
   for (const cell of board.flat()) {
     if (cell.isMine) {
@@ -175,7 +227,10 @@ function areAllSafeCellsRevealed(board) {
 }
 
 function getCell(board, row, col) {
-  if (row < 0 || row >= BOARD_ROWS || col < 0 || col >= BOARD_COLS) {
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+
+  if (row < 0 || row >= rows || col < 0 || col >= cols) {
     return null;
   }
 
@@ -186,10 +241,25 @@ function cellToKey(cell) {
   return `${cell.row}:${cell.col}`;
 }
 
-function positionToKey(position) {
-  const row = Math.floor(position / BOARD_COLS);
-  const col = position % BOARD_COLS;
+function positionToKey(position, cols) {
+  const row = Math.floor(position / cols);
+  const col = position % cols;
   return `${row}:${col}`;
+}
+
+function normalizeConfig(config) {
+  const rows = clampInteger(config.rows, 4, 30, DEFAULT_GAME_CONFIG.rows);
+  const cols = clampInteger(config.cols, 4, 30, DEFAULT_GAME_CONFIG.cols);
+  const maxMines = Math.max(1, rows * cols - 9);
+  const mines = clampInteger(config.mines, 1, maxMines, DEFAULT_GAME_CONFIG.mines);
+
+  return { rows, cols, mines };
+}
+
+function clampInteger(value, min, max, fallback) {
+  const number = Number.parseInt(value, 10);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
 }
 
 function shuffle(items) {

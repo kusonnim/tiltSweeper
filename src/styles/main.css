@@ -111,14 +111,71 @@ body[data-theme="chess"] {
   opacity: 0.6;
 }
 
-.board {
-  position: relative;
+.difficulty-panel {
   display: grid;
   width: min(92vw, 520px);
   max-width: 100%;
-  aspect-ratio: 1;
-  grid-template-columns: repeat(8, 1fr);
-  grid-template-rows: repeat(8, 1fr);
+  gap: 8px;
+}
+
+.difficulty-presets,
+.custom-difficulty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.difficulty-button,
+.custom-difficulty button {
+  border: 1px solid color-mix(in srgb, var(--cyan) 32%, transparent);
+  background: color-mix(in srgb, var(--panel) 80%, #000);
+  color: var(--cyan-soft);
+  cursor: pointer;
+  font: 700 12px / 1 Inter, ui-sans-serif, system-ui, sans-serif;
+  padding: 7px 10px;
+}
+
+.difficulty-button-active {
+  border-color: color-mix(in srgb, var(--amber) 70%, transparent);
+  color: var(--amber);
+}
+
+.custom-difficulty label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.custom-difficulty input {
+  width: 54px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
+  background: color-mix(in srgb, var(--panel) 80%, #000);
+  color: var(--cyan-soft);
+  font: 700 12px / 1 Inter, ui-sans-serif, system-ui, sans-serif;
+  padding: 6px;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.custom-difficulty input::-webkit-inner-spin-button,
+.custom-difficulty input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.board {
+  position: relative;
+  --cell-size: min(calc((100vw - 32px) / 8), 65px);
+  --cell-gap: 3px;
+  width: calc((var(--cell-size) * var(--visible-cols)) + (var(--cell-gap) * (var(--visible-cols) - 1)));
+  max-width: 100%;
+  height: calc((var(--cell-size) * var(--visible-rows)) + (var(--cell-gap) * (var(--visible-rows) - 1)));
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--cyan) 38%, transparent);
   background: color-mix(in srgb, var(--panel) 80%, #000);
@@ -126,13 +183,20 @@ body[data-theme="chess"] {
     0 0 0 1px color-mix(in srgb, var(--cyan) 10%, transparent),
     0 18px 48px rgb(0 0 0 / 55%);
   touch-action: none;
-  gap: 3px;
-  padding: 3px;
 }
 
 body[data-theme="chess"] .board {
-  gap: 0;
-  padding: 0;
+  --cell-gap: 0px;
+}
+
+.board-grid {
+  display: grid;
+  width: calc((var(--cell-size) * var(--cols)) + (var(--cell-gap) * (var(--cols) - 1)));
+  height: calc((var(--cell-size) * var(--rows)) + (var(--cell-gap) * (var(--rows) - 1)));
+  grid-template-columns: repeat(var(--cols), var(--cell-size));
+  grid-template-rows: repeat(var(--rows), var(--cell-size));
+  gap: var(--cell-gap);
+  will-change: transform;
 }
 
 body[data-theme="chess"] .cell {
@@ -147,7 +211,7 @@ body[data-theme="chess"] .cell {
   background: var(--cell);
   color: var(--cyan-soft);
   cursor: pointer;
-  font: 700 clamp(16px, 4vw, 28px) / 1 Inter, ui-sans-serif, system-ui, sans-serif;
+  font: 700 clamp(14px, calc(var(--cell-size) * 0.42), 28px) / 1 Inter, ui-sans-serif, system-ui, sans-serif;
   text-shadow: none;
 }
 
