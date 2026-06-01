@@ -236,18 +236,37 @@ body[data-debug="1"] #app {
   }
 
   .hud {
-    min-height: 58px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(calc(100vw - 32px), 520px);
+    min-height: 0;
+    gap: 6px;
+  }
+
+  .hud strong,
+  .hud-hint {
+    grid-column: 1 / -1;
+  }
+
+  .hud > span:not(.hud-hint) {
+    min-width: 0;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.2;
   }
 
   .hud-hint {
-    order: 5;
-    flex-basis: 100%;
+    min-width: 0;
+    line-height: 1.2;
   }
 
-.tilt-button,
+  .tilt-button,
   .settings-open-button,
   .pause-button {
-    min-width: 72px;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 12px;
   }
 }
 
