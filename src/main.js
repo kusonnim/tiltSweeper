@@ -31,6 +31,8 @@ let isBallPlaced = false;
 let debugPanel;
 let difficultyId = storedDifficulty.id;
 let lastHazardHapticKey = '';
+let isPaused = false;
+let pausedAt = 0;
 game.reset(storedDifficulty.config);
 
 const board = createBoardView(game, {
@@ -41,6 +43,7 @@ const board = createBoardView(game, {
   onFlagToggle: toggleFlag,
   getActiveCell: () => ball?.getDebugState().cell,
   getHazardState: getHazardState,
+  isPaused: () => isPaused,
 });
 const input = createInputController();
 const haptics = createHapticsController();
@@ -52,7 +55,9 @@ const hazards = createDynamicHazards({
   getSettings: () => modeSettings,
 });
 const hud = createHud(game, {
+  getPaused: () => isPaused,
   input,
+  onPauseToggle: togglePause,
   onSettingsOpen: openSettings,
   onTiltRequest: enableTilt,
 });
@@ -87,6 +92,7 @@ ball = createBallController({
   board,
   input,
   getHazardHit: isHazardHit,
+  isPaused: () => isPaused,
   isBlockedCell: isHazardBlocked,
   onHazardHit: handleHazardHit,
 });
@@ -99,6 +105,7 @@ debugPanel = debug
       haptics,
       onCircleHazardTest: triggerDebugCircleHazard,
       onEdgeHazardTest: triggerDebugEdgeHazard,
+      onFallingBoxesHazardTest: triggerDebugFallingBoxesHazard,
       onHazardTest: triggerDebugHazard,
       onLineHazardTest: triggerDebugLineHazard,
       onShelterHazardTest: triggerDebugShelterHazard,
@@ -151,6 +158,7 @@ function toggleFlag(cell) {
 }
 
 function restartGame() {
+  resumeFromPause();
   game.reset();
   resetHazards();
   board.resetCamera();
@@ -170,6 +178,7 @@ function applyCustomDifficulty(config) {
 }
 
 function resetWithConfig(config) {
+  resumeFromPause();
   game.reset(config);
   resetHazards();
   storeDifficulty(difficultyId, { rows: game.rows, cols: game.cols, mines: game.mines });
@@ -186,6 +195,29 @@ async function enableTilt() {
 
 function openSettings() {
   settingsPanel.open();
+}
+
+function togglePause() {
+  if (game.status === 'lost' || game.status === 'won') return;
+
+  if (isPaused) {
+    resumeFromPause();
+  } else {
+    isPaused = true;
+    pausedAt = performance.now();
+  }
+
+  renderGame();
+}
+
+function resumeFromPause() {
+  if (!isPaused) return;
+
+  const pauseDuration = performance.now() - pausedAt;
+  hazards.shiftTimers(pauseDuration);
+  ball?.shiftTimers(pauseDuration);
+  isPaused = false;
+  pausedAt = 0;
 }
 
 function selectTheme(themeId) {
@@ -263,6 +295,14 @@ function isHazardBlocked(cell) {
 }
 
 function handleHazardHit(cell) {
+  const effect = hazards.getCellEffect(cell);
+  if (effect.type === 'knockback') {
+    ball.knockbackFromCell(effect.source);
+    ball.makeInvincible(650);
+    haptics.trigger('hazard');
+    return;
+  }
+
   if (modeSettings.hazardHitMode === 'instant') {
     game.failAt(cell);
     resetHazards();
@@ -306,6 +346,12 @@ function triggerDebugShelterHazard() {
   board.updateHazardCells();
 }
 
+function triggerDebugFallingBoxesHazard() {
+  prepareDebugHazard();
+  hazards.triggerFallingBoxes();
+  board.updateHazardCells();
+}
+
 function prepareDebugHazard() {
   if (modeSettings.mode !== 'dynamic') {
     updateModeSettings({ mode: 'dynamic' });
@@ -338,6 +384,7 @@ if (debugPanel) {
   }, 120);
 }
 setInterval(() => {
+  if (isPaused) return;
   if (modeSettings.mode !== 'dynamic' || game.status === 'lost' || game.status === 'won') return;
 
   const hasManualHazard = Boolean(hazards.getDebugState().hazard);

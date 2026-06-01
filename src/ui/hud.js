@@ -1,4 +1,4 @@
-export function createHud(game, { input, onSettingsOpen = () => {}, onTiltRequest = () => {} } = {}) {
+export function createHud(game, { getPaused = () => false, input, onPauseToggle = () => {}, onSettingsOpen = () => {}, onTiltRequest = () => {} } = {}) {
   const element = document.createElement('header');
   element.className = 'hud';
 
@@ -24,6 +24,13 @@ export function createHud(game, { input, onSettingsOpen = () => {}, onTiltReques
     settingsButton.textContent = 'Settings';
     settingsButton.addEventListener('click', onSettingsOpen);
 
+    const pauseButton = document.createElement('button');
+    pauseButton.className = getPaused() ? 'pause-button pause-button-active' : 'pause-button';
+    pauseButton.type = 'button';
+    pauseButton.textContent = getPaused() ? 'Resume' : 'Pause';
+    pauseButton.title = getPaused() ? 'Resume the game' : 'Pause the game';
+    pauseButton.addEventListener('click', onPauseToggle);
+
     const tiltButton = document.createElement('button');
     const tiltStatus = input?.getStatus();
     tiltButton.className = `tilt-button tilt-button-${tiltStatus ?? 'ready'}`;
@@ -33,7 +40,7 @@ export function createHud(game, { input, onSettingsOpen = () => {}, onTiltReques
     tiltButton.disabled = ['waiting', 'active'].includes(tiltStatus);
     tiltButton.addEventListener('click', onTiltRequest);
 
-    element.append(title, size, mines, hint, settingsButton, tiltButton);
+    element.append(title, size, mines, hint, settingsButton, pauseButton, tiltButton);
   }
 
   return {

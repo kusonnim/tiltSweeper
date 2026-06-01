@@ -3,11 +3,13 @@ const ACCELERATION = 0.294;
 const FRICTION = 0.94;
 const MAX_SPEED = 4.2;
 const DWELL_DURATION_MS = 650;
+const KNOCKBACK_SPEED = 7.4;
 
 export function createBallController({
   board,
   input,
   getHazardHit = () => false,
+  isPaused = () => false,
   isBlockedCell = () => false,
   onHazardHit = () => {},
 }) {
@@ -40,7 +42,7 @@ export function createBallController({
   }
 
   function tick() {
-    if (isPlaced) {
+    if (isPlaced && !isPaused()) {
       applyInput();
       const previousPosition = { x: position.x, y: position.y };
       move();
@@ -230,6 +232,20 @@ export function createBallController({
     playImpact();
   }
 
+  function knockbackFromCell(cell, durationMs = 520) {
+    const center = board.getCellCenter(cell.row, cell.col);
+    if (!center) return;
+
+    const dx = position.x - center.x;
+    const dy = position.y - center.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    stunnedUntil = performance.now() + durationMs;
+    velocity.x = (dx / distance) * KNOCKBACK_SPEED;
+    velocity.y = (dy / distance) * KNOCKBACK_SPEED;
+    resetDwell();
+    playImpact();
+  }
+
   function makeInvincible(durationMs = 1400) {
     invincibleUntil = performance.now() + durationMs;
     ball.classList.add('ball-invincible');
@@ -247,6 +263,24 @@ export function createBallController({
 
     lastHazardHitAt = now;
     onHazardHit(cell);
+  }
+
+  function shiftTimers(durationMs) {
+    if (dwellStartedAt > 0) {
+      dwellStartedAt += durationMs;
+    }
+
+    if (stunnedUntil > 0) {
+      stunnedUntil += durationMs;
+    }
+
+    if (invincibleUntil > 0) {
+      invincibleUntil += durationMs;
+    }
+
+    if (lastHazardHitAt > 0) {
+      lastHazardHitAt += durationMs;
+    }
   }
 
   function getDebugState() {
@@ -273,7 +307,9 @@ export function createBallController({
     start,
     reset,
     getDebugState,
+    knockbackFromCell,
     makeInvincible,
+    shiftTimers,
     stun,
     updateBallPosition,
   };

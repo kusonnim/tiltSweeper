@@ -13,6 +13,15 @@ const SHELTER_WAVE_DELAY_MS = 2600;
 const SHELTER_WAVE_COUNT = 3;
 const SHELTER_WAVE_START_INTERVAL_MS = 780;
 const SHELTER_SHADOW_LENGTH = 3;
+const FALLING_BOX_WARNING_MS = 900;
+const FALLING_BOX_STAGGER_MS = 180;
+const FALLING_BOX_BLOCKER_DURATION_MS = 2800;
+const FALLING_BOX_WAVE_RADIUS = 2;
+const FALLING_BOX_WAVE_STEP_MS = 90;
+const FALLING_FOLLOWUP_DELAY_MS = 900;
+const FALLING_SHELTER_WAVE_DELAY_MS = 900;
+const BOX_LASER_WARNING_MS = 760;
+const BOX_LASER_STAGGER_MS = 180;
 
 export const DYNAMIC_MODE_SETTINGS = {
   customHazardCount: 4,
@@ -38,6 +47,11 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
 
   function triggerRandomGroup(now = performance.now()) {
     const type = pickRandomHazardType();
+    if (type === 'falling-boxes') {
+      triggerFallingBoxes({ now });
+      return;
+    }
+
     if (type === 'shelter') {
       triggerShelterSweep({ now });
       return;
@@ -58,6 +72,11 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
 
   function triggerRandom(now = performance.now()) {
     const type = pickRandomHazardType();
+    if (type === 'falling-boxes') {
+      triggerFallingBoxes({ now });
+      return;
+    }
+
     if (type === 'shelter') {
       triggerShelterSweep({ now });
       return;
@@ -136,6 +155,25 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
     lastAutoAt = now;
   }
 
+  function triggerFallingBoxes({ now = performance.now() } = {}) {
+    const rowCount = getRows();
+    const colCount = getCols();
+    const boxes = createDistributedBoxes(rowCount, colCount, getBoxCount(rowCount, colCount));
+    const followUp = Math.random() < 0.5 ? 'shelter' : 'box-laser';
+    const side = ['top', 'right', 'bottom', 'left'][Math.floor(Math.random() * 4)];
+
+    hazards.push({
+      type: 'falling-boxes',
+      boxes,
+      followUp,
+      lasers: createBoxLasers(boxes, rowCount, colCount),
+      length: ['top', 'bottom'].includes(side) ? rowCount : colCount,
+      side,
+      startedAt: now,
+    });
+    lastAutoAt = now;
+  }
+
   function createEdgeHazard(side, now) {
     const length = ['top', 'bottom'].includes(side) ? getRows() : getCols();
     return {
@@ -167,6 +205,14 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
     lastAutoAt = now;
   }
 
+  function shiftTimers(durationMs) {
+    hazards = hazards.map((hazard) => ({
+      ...hazard,
+      startedAt: hazard.startedAt + durationMs,
+    }));
+    lastAutoAt += durationMs;
+  }
+
   function getCellState(row, col, now = performance.now()) {
     const states = hazards.map((hazard) => getSingleHazardCellState(hazard, row, col, now));
     return pickStrongestState(states);
@@ -189,6 +235,10 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
       return getShelterCellState(hazard, row, col, now);
     }
 
+    if (hazard.type === 'falling-boxes') {
+      return getFallingBoxesCellState(hazard, row, col, now);
+    }
+
     if ((hazard.axis === 'row' && row !== hazard.index) || (hazard.axis === 'col' && col !== hazard.index)) {
       return 'idle';
     }
@@ -198,12 +248,30 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
 
   function isCellActive(cell) {
     if (!cell) return false;
-    return ['active', 'active-pop', 'blocker'].includes(getCellState(cell.row, cell.col));
+    return ['active', 'active-pop', 'knockback-pop', 'blocker'].includes(getCellState(cell.row, cell.col));
   }
 
   function isCellBlocked(cell) {
     if (!cell) return false;
     return getCellState(cell.row, cell.col) === 'blocker';
+  }
+
+  function getCellEffect(cell, now = performance.now()) {
+    if (!cell) return { type: 'none' };
+
+    for (const hazard of hazards) {
+      if (hazard.type === 'falling-boxes') {
+        const source = getFallingBoxWaveSource(hazard, cell.row, cell.col, now);
+        if (source) {
+          return {
+            source,
+            type: 'knockback',
+          };
+        }
+      }
+    }
+
+    return { type: getCellState(cell.row, cell.col, now) === 'idle' ? 'none' : 'hazard' };
   }
 
   function getDebugState() {
@@ -223,10 +291,12 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
 
   return {
     getCellState,
+    getCellEffect,
     getDebugState,
     isCellActive,
     isCellBlocked,
     reset,
+    shiftTimers,
     triggerCircle,
     triggerCircleGroup,
     triggerEdgeWave,
@@ -234,6 +304,7 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
     triggerLineGroup,
     triggerRandom,
     triggerRandomGroup,
+    triggerFallingBoxes,
     triggerShelterSweep,
     update,
   };
@@ -241,9 +312,11 @@ export function createDynamicHazards({ getCircleRadius = () => 1, getMaxHazards 
 
 function pickStrongestState(states) {
   if (states.includes('active-pop')) return 'active-pop';
+  if (states.includes('knockback-pop')) return 'knockback-pop';
   if (states.includes('blocker')) return 'blocker';
   if (states.includes('blocker-warning')) return 'blocker-warning';
   if (states.includes('shelter-shadow')) return 'shelter-shadow';
+  if (states.includes('laser-warning')) return 'laser-warning';
   if (states.includes('warning')) return 'warning';
   if (states.includes('warning-pending')) return 'warning-pending';
   return 'idle';
@@ -252,6 +325,10 @@ function pickStrongestState(states) {
 function getHazardDuration(hazard) {
   if (hazard.type === 'shelter') {
     return getShelterHazardDuration(hazard);
+  }
+
+  if (hazard.type === 'falling-boxes') {
+    return getFallingBoxesHazardDuration(hazard);
   }
 
   return getWarningDuration(hazard) + (Math.max(1, getSequenceLength(hazard)) - 1) * getStepDelay(hazard) + CELL_ACTIVE_POP_DURATION_MS;
@@ -278,6 +355,10 @@ function getSequencedCellState(hazard, position, now) {
 }
 
 function getWarningDuration(hazard) {
+  if (hazard.type === 'falling-boxes') {
+    return FALLING_BOX_WARNING_MS;
+  }
+
   if (hazard.type === 'shelter') {
     return SHELTER_WARNING_DURATION_MS;
   }
@@ -290,6 +371,10 @@ function getWarningDuration(hazard) {
 }
 
 function getActivationDelay(hazard) {
+  if (hazard.type === 'falling-boxes') {
+    return getFallingFollowUpStart(hazard);
+  }
+
   if (hazard.type === 'shelter') {
     return SHELTER_WARNING_DURATION_MS + SHELTER_WAVE_DELAY_MS;
   }
@@ -298,7 +383,7 @@ function getActivationDelay(hazard) {
 }
 
 function getStepDelay(hazard) {
-  if (hazard.type === 'shelter') {
+  if (hazard.type === 'shelter' || (hazard.type === 'falling-boxes' && hazard.followUp === 'shelter')) {
     return SHELTER_EDGE_LINE_DELAY_MS;
   }
 
@@ -347,6 +432,65 @@ function getShelterCellState(hazard, row, col, now) {
   return 'idle';
 }
 
+function getFallingBoxesCellState(hazard, row, col, now) {
+  const box = hazard.boxes.find((candidate) => candidate.row === row && candidate.col === col);
+  const elapsed = now - hazard.startedAt;
+  if (box) {
+    const warningStartsAt = box.order * FALLING_BOX_STAGGER_MS;
+    const landsAt = FALLING_BOX_WARNING_MS + warningStartsAt;
+    if (elapsed < warningStartsAt) {
+      return 'warning-pending';
+    }
+
+    if (elapsed < landsAt) {
+      return 'blocker-warning';
+    }
+
+    const blockerEndsAt = hazard.followUp ? getFallingBoxesHazardDuration(hazard) : landsAt + FALLING_BOX_BLOCKER_DURATION_MS;
+    return elapsed < blockerEndsAt ? 'blocker' : 'idle';
+  }
+
+  const impactState = getFallingBoxWaveState(hazard, row, col, elapsed);
+  if (impactState !== 'idle') {
+    return impactState;
+  }
+
+  if (hazard.followUp === 'shelter') {
+    return getFallingShelterCellState(hazard, row, col, elapsed);
+  }
+
+  if (hazard.followUp === 'box-laser') {
+    return getBoxLaserCellState(hazard, row, col, elapsed);
+  }
+
+  return 'idle';
+}
+
+function getFallingBoxWaveState(hazard, row, col, elapsed) {
+  return getFallingBoxWaveSourceFromElapsed(hazard, row, col, elapsed) ? 'knockback-pop' : 'idle';
+}
+
+function getFallingBoxWaveSource(hazard, row, col, now) {
+  return getFallingBoxWaveSourceFromElapsed(hazard, row, col, now - hazard.startedAt);
+}
+
+function getFallingBoxWaveSourceFromElapsed(hazard, row, col, elapsed) {
+  for (const box of hazard.boxes) {
+    const distance = Math.floor(Math.hypot(row - box.row, col - box.col));
+    if (distance === 0 || distance > FALLING_BOX_WAVE_RADIUS) {
+      continue;
+    }
+
+    const landsAt = FALLING_BOX_WARNING_MS + box.order * FALLING_BOX_STAGGER_MS;
+    const waveStartsAt = landsAt + distance * FALLING_BOX_WAVE_STEP_MS;
+    if (elapsed >= waveStartsAt && elapsed < waveStartsAt + CELL_ACTIVE_POP_DURATION_MS) {
+      return box;
+    }
+  }
+
+  return null;
+}
+
 function getShelterWaveCellState(hazard, row, col, activeElapsed) {
   if (activeElapsed < SHELTER_WAVE_DELAY_MS) {
     return 'idle';
@@ -358,6 +502,48 @@ function getShelterWaveCellState(hazard, row, col, activeElapsed) {
   for (let waveIndex = 0; waveIndex < SHELTER_WAVE_COUNT; waveIndex += 1) {
     const elapsedInWave = waveElapsed - waveIndex * SHELTER_WAVE_START_INTERVAL_MS;
     if (elapsedInWave >= popStartsAt && elapsedInWave < popStartsAt + CELL_ACTIVE_POP_DURATION_MS) {
+      return 'active-pop';
+    }
+  }
+
+  return 'idle';
+}
+
+function getFallingShelterCellState(hazard, row, col, elapsed) {
+  const followUpElapsed = elapsed - getFallingFollowUpStart(hazard);
+  if (followUpElapsed < 0) {
+    return 'idle';
+  }
+
+  if (isShelterShadowCell(hazard, row, col)) {
+    return 'shelter-shadow';
+  }
+
+  if (followUpElapsed < FALLING_SHELTER_WAVE_DELAY_MS) {
+    return 'idle';
+  }
+
+  return getShelterWaveCellState(hazard, row, col, SHELTER_WAVE_DELAY_MS + followUpElapsed - FALLING_SHELTER_WAVE_DELAY_MS);
+}
+
+function getBoxLaserCellState(hazard, row, col, elapsed) {
+  const followUpStart = getFallingFollowUpStart(hazard);
+
+  for (const laser of hazard.lasers) {
+    if (!isCellOnLaser(row, col, laser)) {
+      continue;
+    }
+
+    const startsAt = followUpStart + laser.order * BOX_LASER_STAGGER_MS;
+    if (elapsed < startsAt) {
+      continue;
+    }
+
+    if (elapsed < startsAt + BOX_LASER_WARNING_MS) {
+      return 'laser-warning';
+    }
+
+    if (elapsed < startsAt + BOX_LASER_WARNING_MS + CELL_ACTIVE_POP_DURATION_MS) {
       return 'active-pop';
     }
   }
@@ -419,10 +605,40 @@ function getShelterHazardDuration(hazard) {
   );
 }
 
+function getFallingBoxesHazardDuration(hazard) {
+  const baseDuration =
+    FALLING_BOX_WARNING_MS +
+    Math.max(0, hazard.boxes.length - 1) * FALLING_BOX_STAGGER_MS +
+    FALLING_BOX_BLOCKER_DURATION_MS +
+    FALLING_BOX_WAVE_RADIUS * FALLING_BOX_WAVE_STEP_MS +
+    CELL_ACTIVE_POP_DURATION_MS;
+  const followUpStart = getFallingFollowUpStart(hazard);
+
+  if (hazard.followUp === 'shelter') {
+    return Math.max(
+      baseDuration,
+      followUpStart + FALLING_SHELTER_WAVE_DELAY_MS + Math.max(0, SHELTER_WAVE_COUNT - 1) * SHELTER_WAVE_START_INTERVAL_MS + getShelterWaveDuration(hazard),
+    );
+  }
+
+  if (hazard.followUp === 'box-laser') {
+    return Math.max(
+      baseDuration,
+      followUpStart + Math.max(0, hazard.lasers.length - 1) * BOX_LASER_STAGGER_MS + BOX_LASER_WARNING_MS + CELL_ACTIVE_POP_DURATION_MS,
+    );
+  }
+
+  return baseDuration;
+}
+
+function getFallingFollowUpStart(hazard) {
+  return FALLING_BOX_WARNING_MS + Math.max(0, hazard.boxes.length - 1) * FALLING_BOX_STAGGER_MS + FALLING_FOLLOWUP_DELAY_MS;
+}
+
 function createShelterBoxes(side, rowCount, colCount) {
   const rows = getSafeDimension(rowCount);
   const cols = getSafeDimension(colCount);
-  const targetCount = Math.max(1, Math.floor((rows * cols) / 36));
+  const targetCount = getBoxCount(rows, cols);
   const rowRange = normalizeRange(
     side === 'bottom' ? Math.min(rows - 1, SHELTER_SHADOW_LENGTH) : 1,
     side === 'top' ? Math.max(0, rows - SHELTER_SHADOW_LENGTH - 1) : rows - 2,
@@ -452,6 +668,73 @@ function createShelterBoxes(side, rowCount, colCount) {
   }
 
   return boxes;
+}
+
+function createDistributedBoxes(rowCount, colCount, targetCount) {
+  const rows = getSafeDimension(rowCount);
+  const cols = getSafeDimension(colCount);
+  const boxes = [];
+  const rowRange = normalizeRange(0, rows - 1, rows);
+  const colRange = normalizeRange(0, cols - 1, cols);
+  const spreadAxis = cols >= rows ? 'col' : 'row';
+  const spreadRange = spreadAxis === 'col' ? colRange : rowRange;
+  const depthRange = spreadAxis === 'col' ? rowRange : colRange;
+  const segments = createSegments(spreadRange.min, spreadRange.max, targetCount);
+
+  for (const [order, segment] of segments.entries()) {
+    const spreadValue = randomInteger(segment.min, segment.max);
+    const depthValue = randomInteger(depthRange.min, depthRange.max);
+    const box = spreadAxis === 'col' ? { row: depthValue, col: spreadValue, order } : { row: spreadValue, col: depthValue, order };
+    if (!hasCell(boxes, box.row, box.col)) {
+      boxes.push(box);
+    }
+  }
+
+  while (boxes.length < targetCount && boxes.length < rows * cols) {
+    const box = {
+      row: randomInteger(rowRange.min, rowRange.max),
+      col: randomInteger(colRange.min, colRange.max),
+      order: boxes.length,
+    };
+    if (!hasCell(boxes, box.row, box.col)) {
+      boxes.push(box);
+    }
+  }
+
+  return boxes;
+}
+
+function createBoxLasers(boxes, rowCount, colCount) {
+  const directions = [
+    { row: -1, col: 0 },
+    { row: 1, col: 0 },
+    { row: 0, col: -1 },
+    { row: 0, col: 1 },
+  ];
+
+  return boxes.map((box, order) => ({
+    ...box,
+    direction: directions[Math.floor(Math.random() * directions.length)],
+    order,
+    rows: rowCount,
+    cols: colCount,
+  }));
+}
+
+function isCellOnLaser(row, col, laser) {
+  if (row === laser.row && col === laser.col) {
+    return false;
+  }
+
+  if (laser.direction.row !== 0) {
+    return col === laser.col && (row - laser.row) * laser.direction.row > 0;
+  }
+
+  return row === laser.row && (col - laser.col) * laser.direction.col > 0;
+}
+
+function getBoxCount(rows, cols) {
+  return Math.max(1, Math.floor((rows * cols) / 36));
 }
 
 function createSegments(min, max, count) {
@@ -520,9 +803,10 @@ function getMaxCircleDistance(centerRow, centerCol, radius) {
 
 function pickRandomHazardType() {
   const roll = Math.random();
-  if (roll < 0.18) return 'shelter';
-  if (roll < 0.38) return 'edge';
-  if (roll < 0.62) return 'circle';
+  if (roll < 0.16) return 'falling-boxes';
+  if (roll < 0.32) return 'shelter';
+  if (roll < 0.50) return 'edge';
+  if (roll < 0.72) return 'circle';
   return 'line';
 }
 

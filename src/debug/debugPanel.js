@@ -6,6 +6,7 @@ export function createDebugPanel({
   hazards = null,
   onCircleHazardTest = () => {},
   onEdgeHazardTest = () => {},
+  onFallingBoxesHazardTest = () => {},
   onHazardTest = () => {},
   onLineHazardTest = () => {},
   onShelterHazardTest = () => {},
@@ -76,7 +77,22 @@ export function createDebugPanel({
     shelterHazardButton.textContent = 'Trigger shelter';
     addDebugAction(shelterHazardButton, onShelterHazardTest);
 
-    actions.append(winButton, loseButton, hazardButton, lineHazardButton, circleHazardButton, edgeHazardButton, shelterHazardButton);
+    const fallingBoxesHazardButton = document.createElement('button');
+    fallingBoxesHazardButton.className = 'debug-action debug-action-danger';
+    fallingBoxesHazardButton.type = 'button';
+    fallingBoxesHazardButton.textContent = 'Trigger falling';
+    addDebugAction(fallingBoxesHazardButton, onFallingBoxesHazardTest);
+
+    actions.append(
+      winButton,
+      loseButton,
+      hazardButton,
+      lineHazardButton,
+      circleHazardButton,
+      edgeHazardButton,
+      shelterHazardButton,
+      fallingBoxesHazardButton,
+    );
     element.append(actions);
     update();
   }
@@ -197,6 +213,10 @@ function formatHazardShape(hazard) {
 
   if (hazard.type === 'shelter') {
     return `shelter ${hazard.side} ${hazard.boxes?.length ?? 0} boxes`;
+  }
+
+  if (hazard.type === 'falling-boxes') {
+    return `falling ${hazard.followUp ?? 'none'} ${hazard.boxes?.length ?? 0} boxes`;
   }
 
   return `${hazard.axis} ${hazard.index} ${formatDirection(hazard)}`;

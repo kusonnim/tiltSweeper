@@ -12,6 +12,7 @@ export function createBoardView(
     onFlagToggle = () => {},
     getActiveCell = () => null,
     getHazardState = () => 'idle',
+    isPaused = () => false,
   } = {},
 ) {
   const element = document.createElement('main');
@@ -25,7 +26,7 @@ export function createBoardView(
 
   function render() {
     configureBoardSize();
-    element.className = `board board-${game.status}`;
+    element.className = isPaused() ? `board board-${game.status} board-paused` : `board board-${game.status}`;
     grid.innerHTML = '';
     const winOrigin = game.status === 'won' ? getActiveCell() : null;
 
@@ -50,6 +51,8 @@ export function createBoardView(
         cell.dataset.col = String(col);
         cell.textContent = getCellText(boardCell, debug);
         cell.addEventListener('click', (event) => {
+          if (isPaused()) return;
+
           if (!isBallPlaced() && !event.shiftKey) {
             onBallPlace({ row, col });
             return;
@@ -65,6 +68,7 @@ export function createBoardView(
         });
         cell.addEventListener('contextmenu', (event) => {
           event.preventDefault();
+          if (isPaused()) return;
           onFlagToggle({ row, col });
         });
         grid.append(cell);
@@ -312,12 +316,20 @@ function getCellClassName(cell, debug, isActive, isLightSquare, isWinCelebrating
     classNames.push('cell-hazard-shelter-shadow');
   }
 
+  if (hazardState === 'laser-warning') {
+    classNames.push('cell-hazard-laser-warning');
+  }
+
   if (hazardState === 'active' || hazardState === 'active-pop') {
     classNames.push('cell-hazard-active');
   }
 
   if (hazardState === 'active-pop') {
     classNames.push('cell-hazard-active-pop');
+  }
+
+  if (hazardState === 'knockback-pop') {
+    classNames.push('cell-hazard-knockback-pop');
   }
 
   return classNames.join(' ');
@@ -329,8 +341,10 @@ function applyHazardClass(cell, hazardState) {
   cell.classList.toggle('cell-hazard-blocker-warning', hazardState === 'blocker-warning');
   cell.classList.toggle('cell-hazard-blocker', hazardState === 'blocker');
   cell.classList.toggle('cell-hazard-shelter-shadow', hazardState === 'shelter-shadow');
+  cell.classList.toggle('cell-hazard-laser-warning', hazardState === 'laser-warning');
   cell.classList.toggle('cell-hazard-active', hazardState === 'active' || hazardState === 'active-pop');
   cell.classList.toggle('cell-hazard-active-pop', hazardState === 'active-pop');
+  cell.classList.toggle('cell-hazard-knockback-pop', hazardState === 'knockback-pop');
 }
 
 function getCellText(cell, debug) {
