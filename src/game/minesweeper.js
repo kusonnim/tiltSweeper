@@ -23,6 +23,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
     mines: initialConfig.mines,
     board: createMinefield(initialConfig),
     isInitialized: false,
+    lastExplodedCell: null,
     status: 'ready',
     revealCell(row, col) {
       if (game.status === 'lost' || game.status === 'won') return;
@@ -42,6 +43,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
 
       if (cell.isMine) {
         cell.isRevealed = true;
+        game.lastExplodedCell = { row: cell.row, col: cell.col };
         revealAllMines(game.board);
         game.status = 'lost';
         return;
@@ -76,6 +78,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
       game.mines = config.mines;
       game.board = createMinefield(config);
       game.isInitialized = false;
+      game.lastExplodedCell = null;
       game.status = 'ready';
     },
     getDebugState() {
@@ -87,6 +90,7 @@ export function createMinesweeperGame(config = DEFAULT_GAME_CONFIG) {
         opened: cells.filter((cell) => cell.isRevealed).length,
         flags: cells.filter((cell) => cell.isFlagged).length,
         mines: cells.filter((cell) => cell.isMine).length,
+        lastExplodedCell: game.lastExplodedCell,
         safeCells: cells.filter((cell) => !cell.isMine).length,
       };
     },
@@ -191,6 +195,7 @@ function revealNeighborCellsFromNumber(game, cell) {
 
     if (neighbor.isMine) {
       neighbor.isRevealed = true;
+      game.lastExplodedCell = { row: neighbor.row, col: neighbor.col };
       revealAllMines(game.board);
       game.status = 'lost';
       return;

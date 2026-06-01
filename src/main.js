@@ -14,6 +14,9 @@ const app = document.querySelector('#app');
 const debug = isDebugMode();
 const theme = createThemeController();
 theme.applyTheme();
+if (debug) {
+  document.body.dataset.debug = '1';
+}
 
 const game = createMinesweeperGame();
 let ball;
@@ -51,7 +54,9 @@ const uiState = {
 app.append(hud.element, difficultyPanel.element, board.element, screens.element);
 
 ball = createBallController({ board, input });
-debugPanel = debug ? createDebugPanel({ game, ball, input }) : null;
+debugPanel = debug
+  ? createDebugPanel({ game, ball, input, onWinPulseTest: playDebugWinPulse, onLosePulseTest: playDebugLosePulse })
+  : null;
 if (debugPanel) {
   app.append(debugPanel.element);
 }
@@ -71,8 +76,12 @@ function renderGame() {
 }
 
 function revealCell(cell) {
+  const previousStatus = game.status;
   game.revealCell(cell.row, cell.col);
   renderGame();
+  if (previousStatus !== 'lost' && game.status === 'lost') {
+    playLoseEffect(game.lastExplodedCell ?? cell);
+  }
 }
 
 function placeBall(cell) {
@@ -121,6 +130,19 @@ async function enableTilt() {
 function nextTheme() {
   theme.nextTheme();
   renderGame();
+}
+
+function playDebugWinPulse(cell) {
+  board.playWinPulse(cell);
+}
+
+function playDebugLosePulse(cell) {
+  playLoseEffect(cell);
+}
+
+function playLoseEffect(cell) {
+  board.playLosePulse(cell);
+  ball.playImpact();
 }
 
 renderGame();

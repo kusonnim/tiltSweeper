@@ -19,11 +19,29 @@ export const DIFFICULTIES = [
 export function createDifficultyPanel({ getConfig, getDifficultyId, onPreset, onCustom }) {
   const element = document.createElement('section');
   element.className = 'difficulty-panel';
+  let isExpanded = false;
 
   function render() {
     const config = getConfig();
     const activeDifficultyId = getDifficultyId();
     element.innerHTML = '';
+    element.className = isExpanded ? 'difficulty-panel difficulty-panel-expanded' : 'difficulty-panel';
+
+    const summary = document.createElement('button');
+    summary.className = 'difficulty-summary';
+    summary.type = 'button';
+    summary.textContent = getDifficultySummary(config, activeDifficultyId);
+    summary.setAttribute('aria-expanded', String(isExpanded));
+    summary.addEventListener('click', () => {
+      isExpanded = !isExpanded;
+      render();
+    });
+
+    element.append(summary);
+
+    if (!isExpanded) {
+      return;
+    }
 
     const presets = document.createElement('div');
     presets.className = 'difficulty-presets';
@@ -33,7 +51,10 @@ export function createDifficultyPanel({ getConfig, getDifficultyId, onPreset, on
       button.className = difficulty.id === activeDifficultyId ? 'difficulty-button difficulty-button-active' : 'difficulty-button';
       button.type = 'button';
       button.textContent = difficulty.label;
-      button.addEventListener('click', () => onPreset(difficulty));
+      button.addEventListener('click', () => {
+        isExpanded = false;
+        onPreset(difficulty);
+      });
       presets.append(button);
     }
 
@@ -48,6 +69,7 @@ export function createDifficultyPanel({ getConfig, getDifficultyId, onPreset, on
     custom.addEventListener('submit', (event) => {
       event.preventDefault();
       const formData = new FormData(custom);
+      isExpanded = false;
       onCustom({
         rows: formData.get('rows'),
         cols: formData.get('cols'),
@@ -62,4 +84,11 @@ export function createDifficultyPanel({ getConfig, getDifficultyId, onPreset, on
     element,
     render,
   };
+}
+
+function getDifficultySummary(config, difficultyId) {
+  const preset = DIFFICULTIES.find((difficulty) => difficulty.id === difficultyId);
+  const label = preset?.label ?? 'Custom';
+
+  return `${label} ${config.rows} x ${config.cols} / ${config.mines}`;
 }

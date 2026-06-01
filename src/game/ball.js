@@ -182,6 +182,14 @@ export function createBallController({ board, input }) {
     ball.classList.add('ball-unplaced');
   }
 
+  function playImpact() {
+    if (!isPlaced) return;
+
+    ball.classList.remove('ball-impact');
+    void ball.offsetWidth;
+    ball.classList.add('ball-impact');
+  }
+
   function getDebugState() {
     return {
       isPlaced,
@@ -200,6 +208,7 @@ export function createBallController({ board, input }) {
     element: ball,
     onEnterCell,
     placeAtCell,
+    playImpact,
     start,
     reset,
     getDebugState,

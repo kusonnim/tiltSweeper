@@ -1,4 +1,4 @@
-export function createDebugPanel({ game, ball, input }) {
+export function createDebugPanel({ game, ball, input, onWinPulseTest = () => {}, onLosePulseTest = () => {} }) {
   const element = document.createElement('aside');
   element.className = 'debug-panel';
 
@@ -17,7 +17,21 @@ export function createDebugPanel({ game, ball, input }) {
       <div><strong>Dwell</strong><span>${formatPercent(ballState.dwellProgress)} ${ballState.activeCellKey || ''}</span></div>
       <div><strong>Game</strong><span>${gameState.status} / initialized: ${gameState.isInitialized ? 'yes' : 'no'}</span></div>
       <div><strong>Cells</strong><span>opened ${gameState.opened}, flags ${gameState.flags}, mines ${gameState.mines}</span></div>
+      <div><strong>Exploded</strong><span>${formatCell(gameState.lastExplodedCell)}</span></div>
+      <section class="debug-actions">
+        <button class="debug-action" data-action="win" type="button" ${cell ? '' : 'disabled'}>${cell ? 'Win pulse test' : 'Place ball first'}</button>
+        <button class="debug-action debug-action-danger" data-action="lose" type="button" ${cell ? '' : 'disabled'}>${cell ? 'Lose shock test' : 'Place ball first'}</button>
+      </section>
     `;
+
+    element.querySelector('[data-action="win"]')?.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      onWinPulseTest(cell);
+    });
+    element.querySelector('[data-action="lose"]')?.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      onLosePulseTest(cell);
+    });
   }
 
   return {

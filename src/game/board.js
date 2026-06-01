@@ -22,7 +22,9 @@ export function createBoardView(
 
   function render() {
     configureBoardSize();
+    element.className = `board board-${game.status}`;
     grid.innerHTML = '';
+    const winOrigin = game.status === 'won' ? getActiveCell() : null;
 
     for (let row = 0; row < game.rows; row += 1) {
       for (let col = 0; col < game.cols; col += 1) {
@@ -34,7 +36,11 @@ export function createBoardView(
           debug,
           activeCell?.row === row && activeCell?.col === col,
           (row + col) % 2 === 0,
+          Boolean(winOrigin),
         );
+        if (winOrigin) {
+          cell.style.animationDelay = `${getWinPulseDelay(row, col, winOrigin)}ms`;
+        }
         cell.type = 'button';
         cell.dataset.row = String(row);
         cell.dataset.col = String(col);
@@ -173,6 +179,39 @@ export function createBoardView(
     cell?.classList.add('cell-active');
   }
 
+  function playWinPulse(origin) {
+    if (!origin) return;
+
+    for (const cell of grid.querySelectorAll('.cell')) {
+      const row = Number.parseInt(cell.dataset.row, 10);
+      const col = Number.parseInt(cell.dataset.col, 10);
+
+      cell.classList.remove('cell-win-pulse');
+      cell.style.animationDelay = `${getWinPulseDelay(row, col, origin)}ms`;
+      void cell.offsetWidth;
+      cell.classList.add('cell-win-pulse');
+    }
+  }
+
+  function playLosePulse(origin) {
+    if (!origin) return;
+
+    element.classList.remove('board-shock');
+    void element.offsetWidth;
+    element.classList.add('board-shock');
+
+    for (const cell of grid.querySelectorAll('.cell')) {
+      const row = Number.parseInt(cell.dataset.row, 10);
+      const col = Number.parseInt(cell.dataset.col, 10);
+      const isOrigin = row === origin.row && col === origin.col;
+
+      cell.classList.remove('cell-lose-shock', 'cell-explosion');
+      cell.style.animationDelay = `${getLoseShockDelay(row, col, origin)}ms`;
+      void cell.offsetWidth;
+      cell.classList.add(isOrigin ? 'cell-explosion' : 'cell-lose-shock');
+    }
+  }
+
   function configureBoardSize() {
     element.style.setProperty('--cols', String(game.cols));
     element.style.setProperty('--rows', String(game.rows));
@@ -209,6 +248,8 @@ export function createBoardView(
     getBounds,
     getViewportBounds,
     isCellRevealable,
+    playLosePulse,
+    playWinPulse,
     resetCamera,
     updateCamera,
     updateActiveCell,
@@ -216,7 +257,7 @@ export function createBoardView(
   };
 }
 
-function getCellClassName(cell, debug, isActive, isLightSquare) {
+function getCellClassName(cell, debug, isActive, isLightSquare, isWinCelebrating) {
   const classNames = ['cell'];
 
   classNames.push(isLightSquare ? 'cell-light' : 'cell-dark');
@@ -241,6 +282,10 @@ function getCellClassName(cell, debug, isActive, isLightSquare) {
     classNames.push('cell-mine');
   }
 
+  if (isWinCelebrating) {
+    classNames.push('cell-win-pulse');
+  }
+
   return classNames.join(' ');
 }
 
@@ -256,4 +301,14 @@ function getCellText(cell, debug) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function getWinPulseDelay(row, col, origin) {
+  const distance = Math.hypot(row - origin.row, col - origin.col);
+  return Math.round(distance * 55);
+}
+
+function getLoseShockDelay(row, col, origin) {
+  const distance = Math.hypot(row - origin.row, col - origin.col);
+  return Math.round(distance * 38);
 }

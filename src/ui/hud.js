@@ -26,10 +26,12 @@ export function createHud(game, { input, theme, onThemeNext = () => {}, onTiltRe
     themeButton.addEventListener('click', onThemeNext);
 
     const tiltButton = document.createElement('button');
-    tiltButton.className = 'tilt-button';
+    const tiltStatus = input?.getStatus();
+    tiltButton.className = `tilt-button tilt-button-${tiltStatus ?? 'ready'}`;
     tiltButton.type = 'button';
-    tiltButton.textContent = getTiltButtonText(input?.getStatus());
-    tiltButton.disabled = ['waiting', 'active'].includes(input?.getStatus());
+    tiltButton.textContent = getTiltButtonText(tiltStatus);
+    tiltButton.title = getTiltButtonTitle(tiltStatus);
+    tiltButton.disabled = ['waiting', 'active'].includes(tiltStatus);
     tiltButton.addEventListener('click', onTiltRequest);
 
     element.append(title, size, mines, hint, themeButton, tiltButton);
@@ -52,4 +54,17 @@ function getTiltButtonText(status) {
   };
 
   return labels[status] ?? 'Tilt';
+}
+
+function getTiltButtonTitle(status) {
+  const titles = {
+    ready: 'Enable phone tilt controls',
+    waiting: 'Waiting for sensor permission',
+    active: 'Tilt controls are active',
+    denied: 'Sensor permission was denied. Tap to retry.',
+    unsupported: 'This browser may not support tilt controls.',
+    'needs-https': 'Tilt controls require HTTPS or localhost.',
+  };
+
+  return titles[status] ?? titles.ready;
 }
