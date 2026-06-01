@@ -13,6 +13,18 @@ export const THEMES = [
     id: 'garden',
     label: 'Garden',
   },
+  {
+    id: 'blueprint',
+    label: 'Blueprint',
+  },
+  {
+    id: 'arcade',
+    label: 'Arcade',
+  },
+  {
+    id: 'paper',
+    label: 'Paper',
+  },
 ];
 
 export function createThemeController() {
