@@ -1,4 +1,4 @@
-export function createHud(game, { input, theme, onThemeNext = () => {}, onTiltRequest = () => {} } = {}) {
+export function createHud(game, { input, onSettingsOpen = () => {}, onTiltRequest = () => {} } = {}) {
   const element = document.createElement('header');
   element.className = 'hud';
 
@@ -18,12 +18,11 @@ export function createHud(game, { input, theme, onThemeNext = () => {}, onTiltRe
     hint.className = 'hud-hint';
     hint.textContent = 'Tap flags';
 
-    const themeButton = document.createElement('button');
-    themeButton.className = 'theme-button';
-    themeButton.type = 'button';
-    themeButton.textContent = theme?.getThemeLabel() ?? 'Theme';
-    themeButton.title = 'Next theme';
-    themeButton.addEventListener('click', onThemeNext);
+    const settingsButton = document.createElement('button');
+    settingsButton.className = 'settings-open-button';
+    settingsButton.type = 'button';
+    settingsButton.textContent = 'Settings';
+    settingsButton.addEventListener('click', onSettingsOpen);
 
     const tiltButton = document.createElement('button');
     const tiltStatus = input?.getStatus();
@@ -34,7 +33,7 @@ export function createHud(game, { input, theme, onThemeNext = () => {}, onTiltRe
     tiltButton.disabled = ['waiting', 'active'].includes(tiltStatus);
     tiltButton.addEventListener('click', onTiltRequest);
 
-    element.append(title, size, mines, hint, themeButton, tiltButton);
+    element.append(title, size, mines, hint, settingsButton, tiltButton);
   }
 
   return {

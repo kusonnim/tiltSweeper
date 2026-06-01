@@ -2,10 +2,12 @@ import './styles/main.css';
 import { createMinesweeperGame } from './game/minesweeper.js';
 import { createBoardView } from './game/board.js';
 import { createBallController } from './game/ball.js';
+import { createHapticsController } from './game/haptics.js';
 import { createInputController } from './game/input.js';
 import { createHud } from './ui/hud.js';
-import { DIFFICULTIES, createDifficultyPanel } from './ui/difficultyPanel.js';
+import { DIFFICULTIES } from './ui/difficultyPanel.js';
 import { createScreens } from './ui/screens.js';
+import { createSettingsPanel } from './ui/settingsPanel.js';
 import { createThemeController } from './ui/theme.js';
 import { isDebugMode } from './debug/debug.js';
 import { createDebugPanel } from './debug/debugPanel.js';
@@ -36,25 +38,33 @@ const board = createBoardView(game, {
   getActiveCell: () => ball?.getDebugState().cell,
 });
 const input = createInputController();
+const haptics = createHapticsController();
 const hud = createHud(game, {
   input,
-  theme,
-  onThemeNext: nextTheme,
+  onSettingsOpen: openSettings,
   onTiltRequest: enableTilt,
 });
 const screens = createScreens(game, { onRestart: restartGame });
-const difficultyPanel = createDifficultyPanel({
+const settingsPanel = createSettingsPanel({
   getConfig: () => ({ rows: game.rows, cols: game.cols, mines: game.mines }),
   getDifficultyId: () => difficultyId,
+  getHapticsEnabled: () => haptics.isEnabled(),
+  getInputSettings: () => input.getSettings(),
+  getThemeId: () => theme.getTheme(),
   onPreset: applyPresetDifficulty,
   onCustom: applyCustomDifficulty,
+  onHapticsToggle: setHapticsEnabled,
+  onInputSettingsChange: updateInputSettings,
+  onRecalibrate: recalibrateTilt,
+  onThemeSelect: selectTheme,
+  themes: theme.themes,
 });
 const uiState = {
   isBallPlaced: () => isBallPlaced,
   isDebug: debug,
 };
 
-app.append(hud.element, difficultyPanel.element, board.element, screens.element);
+app.append(hud.element, board.element, screens.element, settingsPanel.element);
 
 ball = createBallController({ board, input });
 debugPanel = debug
@@ -73,7 +83,7 @@ function renderGame() {
     board.element.append(ball.element);
   }
   hud.render();
-  difficultyPanel.render();
+  settingsPanel.render();
   screens.render(uiState);
   debugPanel?.render();
 }
@@ -84,18 +94,22 @@ function revealCell(cell) {
   renderGame();
   if (previousStatus !== 'lost' && game.status === 'lost') {
     playLoseEffect(game.lastExplodedCell ?? cell);
+  } else if (previousStatus !== 'won' && game.status === 'won') {
+    haptics.trigger('win');
+  } else {
+    haptics.trigger('reveal');
   }
 }
 
 function placeBall(cell) {
   isBallPlaced = true;
   ball.placeAtCell(cell);
-  game.revealCell(cell.row, cell.col);
-  renderGame();
+  revealCell(cell);
 }
 
 function toggleFlag(cell) {
   game.toggleFlag(cell.row, cell.col);
+  haptics.trigger('flag');
   renderGame();
 }
 
@@ -131,9 +145,32 @@ async function enableTilt() {
   renderGame();
 }
 
-function nextTheme() {
-  theme.nextTheme();
+function openSettings() {
+  settingsPanel.open();
+}
+
+function selectTheme(themeId) {
+  theme.applyTheme(themeId);
+  settingsPanel.render();
   renderGame();
+}
+
+function updateInputSettings(settings) {
+  input.updateSettings(settings);
+  settingsPanel.render();
+}
+
+function recalibrateTilt() {
+  input.recalibrateTilt();
+  haptics.trigger('flag');
+  renderGame();
+}
+
+function setHapticsEnabled(isEnabled) {
+  haptics.setEnabled(isEnabled);
+  if (isEnabled) {
+    haptics.trigger('flag');
+  }
 }
 
 function playDebugWinPulse(cell) {
@@ -147,6 +184,7 @@ function playDebugLosePulse(cell) {
 function playLoseEffect(cell) {
   board.playLosePulse(cell);
   ball.playImpact();
+  haptics.trigger('lose');
 }
 
 renderGame();

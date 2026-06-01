@@ -1,9 +1,13 @@
-const TILT_SENSITIVITY = 22;
-const TILT_DEAD_ZONE = 0.08;
+const SETTINGS_STORAGE_KEY = 'minesweeper-tilt-input';
+const DEFAULT_SETTINGS = {
+  tiltSensitivity: 22,
+  tiltDeadZone: 0.08,
+};
 
 export function createInputController() {
   const keys = new Set();
   const movementKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd']);
+  const settings = getStoredSettings();
   const tilt = {
     enabled: false,
     status: getInitialTiltStatus(),
@@ -82,6 +86,23 @@ export function createInputController() {
     return tilt.status;
   }
 
+  function getSettings() {
+    return { ...settings };
+  }
+
+  function updateSettings(nextSettings) {
+    settings.tiltSensitivity = clampNumber(nextSettings.tiltSensitivity, 10, 40, settings.tiltSensitivity);
+    settings.tiltDeadZone = clampNumber(nextSettings.tiltDeadZone, 0, 0.3, settings.tiltDeadZone);
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  }
+
+  function recalibrateTilt() {
+    tilt.originGamma = null;
+    tilt.originBeta = null;
+    tilt.gamma = 0;
+    tilt.beta = 0;
+  }
+
   function getDebugState() {
     return {
       status: tilt.status,
@@ -89,6 +110,7 @@ export function createInputController() {
       gamma: tilt.gamma,
       beta: tilt.beta,
       direction: getDirection(),
+      settings: getSettings(),
     };
   }
 
@@ -138,8 +160,8 @@ export function createInputController() {
     }
 
     return {
-      x: applyDeadZone(tilt.gamma / TILT_SENSITIVITY),
-      y: applyDeadZone(tilt.beta / TILT_SENSITIVITY),
+      x: applyDeadZone(tilt.gamma / settings.tiltSensitivity, settings.tiltDeadZone),
+      y: applyDeadZone(tilt.beta / settings.tiltSensitivity, settings.tiltDeadZone),
     };
   }
 
@@ -148,8 +170,11 @@ export function createInputController() {
     enableTilt,
     getDirection,
     getDebugState,
+    getSettings,
     getStatus,
     onStatusChange,
+    recalibrateTilt,
+    updateSettings,
   };
 }
 
@@ -158,11 +183,28 @@ function getInitialTiltStatus() {
   return 'ready';
 }
 
-function applyDeadZone(value) {
+function applyDeadZone(value, deadZone) {
   const clampedValue = clampDirection(value);
-  return Math.abs(clampedValue) < TILT_DEAD_ZONE ? 0 : clampedValue;
+  return Math.abs(clampedValue) < deadZone ? 0 : clampedValue;
 }
 
 function clampDirection(value) {
   return Math.max(-1, Math.min(1, value));
+}
+
+function getStoredSettings() {
+  try {
+    return {
+      ...DEFAULT_SETTINGS,
+      ...JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)),
+    };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
 }

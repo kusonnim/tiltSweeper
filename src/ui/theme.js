@@ -9,6 +9,10 @@ export const THEMES = [
     id: 'chess',
     label: 'Chess',
   },
+  {
+    id: 'garden',
+    label: 'Garden',
+  },
 ];
 
 export function createThemeController() {
